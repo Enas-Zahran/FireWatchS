@@ -31,12 +31,12 @@ class AddEditPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(30, 30, 30, 30),
         children: [
-          _buildTile(
-            context,
-            title: 'المستخدمين',
-            icon: Icons.person,
-            destination:  ManagerUserListPage(),
-          ),
+          // _buildTile(
+          //   context,
+          //   title: 'المستخدمين',
+          //   icon: Icons.person,
+          //   destination:  ManagerUserListPage(),
+          // ),
           const SizedBox(height: 12),
           _buildTile(
             context,

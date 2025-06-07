@@ -4,7 +4,6 @@ import 'package:FireWatch/manager/managerdashboard.dart';
 import 'package:FireWatch/technician/techniciandashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-//import 'package:FireWatch/Start/resetpassword.dart';
 import 'package:FireWatch/My/InputDecoration.dart';
 import 'package:FireWatch/Start/startPage.dart';
 
@@ -35,50 +34,37 @@ class _SignInPageState extends State<SignInPage> {
         final user = response.user;
 
         if (user != null) {
-          // Fetch role and approval status
-          final profileData =
-              await Supabase.instance.client
-                  .from('profiles')
-                  .select('role, is_approved')
-                  .eq('id', user.id)
-                  .single();
+          // Fetch role and approval status from 'users' table
+          final profileData = await Supabase.instance.client
+              .from('users')
+              .select('role, is_approved')
+              .eq('id', user.id)
+              .single();
 
           final role = profileData['role'] as String?;
           final isApproved = profileData['is_approved'] as bool?;
 
           if (isApproved != true) {
-            await Supabase.instance.client.auth
-                .signOut(); // تأكدي ما يدخل الجلسة
+            await Supabase.instance.client.auth.signOut();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
-                  'لم تتم الموافقة على حسابك بعد. الرجاء انتظار موافقة المدير.',
-                ),
+                content: Text('لم تتم الموافقة على حسابك بعد. الرجاء انتظار موافقة المدير.'),
               ),
             );
             return;
           }
 
           if (role != null) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('تم تسجيل الدخول بنجاح')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('تم تسجيل الدخول بنجاح')),
+            );
 
             if (role == 'المدير') {
-              Navigator.pushReplacementNamed(
-                context,
-                ManagerDashboard.managerDashboardRoute,
-              );
+              Navigator.pushReplacementNamed(context, ManagerDashboard.managerDashboardRoute);
             } else if (role == 'فني السلامة العامة') {
-              Navigator.pushReplacementNamed(
-                context,
-                TechnicianDashboard.techniciandashboardRoute,
-              );
+              Navigator.pushReplacementNamed(context, TechnicianDashboard.techniciandashboardRoute);
             } else if (role == 'رئيس الشعبة') {
-              Navigator.pushReplacementNamed(
-                context,
-                Headdashboard.headdashboardRoute,
-              );
+              Navigator.pushReplacementNamed(context, Headdashboard.headdashboardRoute);
             } else {
               Navigator.pushReplacementNamed(context, StartPage.startpageRoute);
             }
@@ -88,18 +74,18 @@ class _SignInPageState extends State<SignInPage> {
             );
           }
         } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('فشل تسجيل الدخول')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('فشل تسجيل الدخول')),
+          );
         }
       } on AuthException catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
       } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('حدث خطأ غير متوقع: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ غير متوقع: $e')),
+        );
       }
     }
   }
@@ -139,9 +125,7 @@ class _SignInPageState extends State<SignInPage> {
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'الرجاء إدخال البريد الإلكتروني';
-                          } else if (!RegExp(
-                            r'^[\w-]+@cit\.just\.edu\.jo$',
-                          ).hasMatch(value)) {
+                          } else if (!RegExp(r'^[\w-]+@cit\.just\.edu\.jo$').hasMatch(value)) {
                             return 'يجب أن يكون البريد الإلكتروني بصيغة username@cit.just.edu.jo';
                           }
                           return null;
@@ -160,9 +144,7 @@ class _SignInPageState extends State<SignInPage> {
                           floatingLabelAlignment: FloatingLabelAlignment.start,
                           prefixIcon: IconButton(
                             icon: Icon(
-                              _isPasswordVisible
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
+                              _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
                               color: Color(0xff00408b),
                             ),
                             onPressed: () {
@@ -186,10 +168,7 @@ class _SignInPageState extends State<SignInPage> {
                     SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: _signIn,
-                      child: Text(
-                        'تسجيل الدخول',
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      child: Text('تسجيل الدخول', style: TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                         minimumSize: Size(400, 50),
                         backgroundColor: Color(0xff00408b),
@@ -202,54 +181,38 @@ class _SignInPageState extends State<SignInPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            'هل نسيت كلمة المرور؟',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.black87,
-                            ),
-                          ),
+                          Text('هل نسيت كلمة المرور؟',
+                              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.black87)),
                           TextButton(
                             onPressed: () {
                               //  Navigator.pushNamed(context, ResetPasswordRequestPage.routeName);
                             },
-                            child: Text(
-                              ' اعادة تعيين كلمة السر ',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            child: Text('اعادة تعيين كلمة السر',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                )),
                           ),
                         ],
                       ),
                     ),
                     SizedBox(height: 5),
-
                     Padding(
                       padding: const EdgeInsets.only(bottom: 50.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            'ليس لديك حساب؟',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.black87,
-                            ),
-                          ),
+                          Text('ليس لديك حساب؟',
+                              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.black87)),
                           TextButton(
                             onPressed: () {
-                              Navigator.pushNamed(
-                                context,
-                                SignUpPage.signupRoute,
-                              );
+                              Navigator.pushNamed(context, SignUpPage.signupRoute);
                             },
-                            child: Text(
-                              'إنشاء حساب جديد',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            child: Text('إنشاء حساب جديد',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                )),
                           ),
                         ],
                       ),
