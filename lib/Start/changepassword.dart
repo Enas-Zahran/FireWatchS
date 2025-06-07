@@ -1,52 +1,23 @@
 // import 'package:flutter/material.dart';
 // import 'package:supabase_flutter/supabase_flutter.dart';
-// import '../My/InputDecoration.dart';
-// import 'package:FireWatch/Start/signin.dart';
+// import 'package:FireWatch/My/InputDecoration.dart';
 
-// class ChangePasswordPage extends StatefulWidget {
-//   static const String routeName = '/reset-password';
+// class NewPasswordPage extends StatefulWidget {
+//   static const String routeName = 'newPassword';
 
 //   @override
-//   _ChangePasswordPageState createState() => _ChangePasswordPageState();
+//   State<NewPasswordPage> createState() => _NewPasswordPageState();
 // }
 
-// class _ChangePasswordPageState extends State<ChangePasswordPage> {
+// class _NewPasswordPageState extends State<NewPasswordPage> {
 //   final _formKey = GlobalKey<FormState>();
 //   final _passwordController = TextEditingController();
-//   String? _token;
-//   bool _verifying = true;
-
-//   @override
-//   void didChangeDependencies() {
-//     super.didChangeDependencies();
-//     final args = ModalRoute.of(context)?.settings.arguments as Map?;
-//     _token = args?['token'];
-
-//     // Optionally verify token here (if not already done in main)
-//     if (_token != null) {
-//       _verifyToken(_token!);
-//     } else {
-//       setState(() => _verifying = false); // No token — proceed anyway
-//     }
-//   }
-
-//   Future<void> _verifyToken(String token) async {
-//     try {
-//       await Supabase.instance.client.auth.verifyOTP(
-//         type: OtpType.recovery,
-//         token: token,
-//       );
-//       setState(() => _verifying = false);
-//     } catch (e) {
-//       ScaffoldMessenger.of(context).showSnackBar(
-//         SnackBar(content: Text('رمز الاستعادة غير صالح أو منتهي الصلاحية')),
-//       );
-//       Navigator.pop(context);
-//     }
-//   }
+//   bool _isLoading = false;
+//   bool _isVisible = false;
 
 //   Future<void> _updatePassword() async {
 //     if (_formKey.currentState!.validate()) {
+//       setState(() => _isLoading = true);
 //       try {
 //         await Supabase.instance.client.auth.updateUser(
 //           UserAttributes(password: _passwordController.text.trim()),
@@ -56,55 +27,84 @@
 //           SnackBar(content: Text('تم تغيير كلمة المرور بنجاح')),
 //         );
 
-//         Navigator.pushNamedAndRemoveUntil(
-//           context,
-//           SignInPage.signinRoute,
-//           (route) => false,
-//         );
-//       } catch (e) {
+//         // يمكنك توجيه المستخدم لصفحة تسجيل الدخول
+//         Navigator.of(context).popUntil((route) => route.isFirst);
+//       } catch (error) {
 //         ScaffoldMessenger.of(context).showSnackBar(
-//           SnackBar(content: Text('حدث خطأ أثناء تحديث كلمة المرور: $e')),
+//           SnackBar(content: Text('فشل في تغيير كلمة المرور: $error')),
 //         );
+//       } finally {
+//         setState(() => _isLoading = false);
 //       }
 //     }
 //   }
 
 //   @override
 //   Widget build(BuildContext context) {
+//     final theme = Theme.of(context);
 //     return Directionality(
 //       textDirection: TextDirection.rtl,
 //       child: Scaffold(
-//         appBar: AppBar(title: Text('تغيير كلمة المرور')),
-//         body: _verifying
-//             ? Center(child: CircularProgressIndicator())
-//             : Padding(
-//                 padding: const EdgeInsets.all(16),
-//                 child: Form(
-//                   key: _formKey,
-//                   child: Column(
-//                     children: [
-//                       TextFormField(
-//                         controller: _passwordController,
-//                         obscureText: true,
-//                         decoration: customInputDecoration.copyWith(
-//                           labelText: 'كلمة مرور جديدة',
+//         appBar: AppBar(
+//           title: Text('تعيين كلمة مرور جديدة'),
+//           backgroundColor: Color(0xff00408b),
+//           iconTheme: IconThemeData(color: Colors.white),
+//         ),
+//         body: Center(
+//           child: Padding(
+//             padding: const EdgeInsets.all(16.0),
+//             child: Form(
+//               key: _formKey,
+//               child: Column(
+//                 mainAxisAlignment: MainAxisAlignment.center,
+//                 children: [
+//                   Text('أدخل كلمة المرور الجديدة الخاصة بك:', style: theme.textTheme.bodyLarge),
+//                   const SizedBox(height: 20),
+//                   SizedBox(
+//                     width: 400,
+//                     child: TextFormField(
+//                       controller: _passwordController,
+//                       obscureText: !_isVisible,
+//                       obscuringCharacter: '*',
+//                       decoration: customInputDecoration.copyWith(
+//                         labelText: 'كلمة المرور الجديدة',
+//                         hintText: '8 أحرف على الأقل',
+//                         prefixIcon: IconButton(
+//                           icon: Icon(
+//                             _isVisible ? Icons.visibility : Icons.visibility_off,
+//                             color: Color(0xff00408b),
+//                           ),
+//                           onPressed: () {
+//                             setState(() {
+//                               _isVisible = !_isVisible;
+//                             });
+//                           },
 //                         ),
-//                         validator: (value) {
-//                           if (value == null || value.length < 8) {
-//                             return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
-//                           }
-//                           return null;
-//                         },
 //                       ),
-//                       SizedBox(height: 20),
-//                       ElevatedButton(
-//                         onPressed: _updatePassword,
-//                         child: Text('تحديث كلمة المرور'),
-//                       ),
-//                     ],
+//                       validator: (value) {
+//                         if (value == null || value.length < 8) {
+//                           return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+//                         }
+//                         return null;
+//                       },
+//                     ),
 //                   ),
-//                 ),
+//                   const SizedBox(height: 20),
+//                   ElevatedButton(
+//                     onPressed: _isLoading ? null : _updatePassword,
+//                     child: _isLoading
+//                         ? CircularProgressIndicator(color: Colors.white)
+//                         : Text('تحديث كلمة المرور', style: TextStyle(color: Colors.white)),
+//                     style: ElevatedButton.styleFrom(
+//                       minimumSize: const Size(400, 50),
+//                       backgroundColor: const Color(0xff00408b),
+//                     ),
+//                   ),
+//                 ],
 //               ),
+//             ),
+//           ),
+//         ),
 //       ),
 //     );
 //   }

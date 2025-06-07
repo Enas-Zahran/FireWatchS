@@ -2,21 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:FireWatch/My/InputDecoration.dart';
 
-class UserApprovalDetailPage extends StatefulWidget {
+class EditUserPage extends StatefulWidget {
   final String userId;
 
-  const UserApprovalDetailPage({super.key, required this.userId});
+  const EditUserPage({super.key, required this.userId});
 
   @override
-  State<UserApprovalDetailPage> createState() => _UserApprovalDetailPageState();
+  State<EditUserPage> createState() => _EditUserPageState();
 }
 
-class _UserApprovalDetailPageState extends State<UserApprovalDetailPage> {
+class _EditUserPageState extends State<EditUserPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   String? _selectedRole;
-
   bool _loading = true;
 
   final List<String> roles = ['المدير', 'فني السلامة العامة', 'رئيس الشعبة'];
@@ -24,11 +23,11 @@ class _UserApprovalDetailPageState extends State<UserApprovalDetailPage> {
   @override
   void initState() {
     super.initState();
-    _fetchUserDetails();
+    _fetchUser();
   }
 
-  Future<void> _fetchUserDetails() async {
-    final data =
+  Future<void> _fetchUser() async {
+    final userData =
         await Supabase.instance.client
             .from('users')
             .select()
@@ -36,14 +35,14 @@ class _UserApprovalDetailPageState extends State<UserApprovalDetailPage> {
             .single();
 
     setState(() {
-      _nameController.text = data['name'] ?? '';
-      _emailController.text = data['email'] ?? '';
-      _selectedRole = data['role'];
+      _nameController.text = userData['name'] ?? '';
+      _emailController.text = userData['email'] ?? '';
+      _selectedRole = userData['role'];
       _loading = false;
     });
   }
 
-  Future<void> _approveUser() async {
+  Future<void> _updateUser() async {
     if (_formKey.currentState!.validate()) {
       await Supabase.instance.client
           .from('users')
@@ -51,14 +50,12 @@ class _UserApprovalDetailPageState extends State<UserApprovalDetailPage> {
             'name': _nameController.text.trim(),
             'email': _emailController.text.trim(),
             'role': _selectedRole,
-            'is_approved': true,
           })
           .eq('id', widget.userId);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم تحديث وموافقة الحساب بنجاح')),
-      );
-
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تم تعديل الحساب بنجاح')));
       Navigator.of(context).pop();
     }
   }
@@ -71,7 +68,7 @@ class _UserApprovalDetailPageState extends State<UserApprovalDetailPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('عرض طلب ${_nameController.text}'),
+          title: Text('تعديل المستخدم'),
           backgroundColor: const Color(0xff00408b),
           iconTheme: const IconThemeData(color: Colors.white),
         ),
@@ -137,13 +134,13 @@ class _UserApprovalDetailPageState extends State<UserApprovalDetailPage> {
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton(
-                          onPressed: _approveUser,
+                          onPressed: _updateUser,
                           style: ElevatedButton.styleFrom(
                             minimumSize: const Size(400, 50),
                             backgroundColor: const Color(0xff00408b),
                           ),
                           child: const Text(
-                            'تأكيد التعديلات والموافقة',
+                            'تعديل الحساب',
                             style: TextStyle(color: Colors.white),
                           ),
                         ),
