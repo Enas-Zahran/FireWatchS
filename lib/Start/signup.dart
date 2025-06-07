@@ -20,7 +20,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final _confirmPasswordController = TextEditingController();
   String? _selectedRole;
 
-  final List<String> _roles = ['فني السلامة العامة','المدير', 'رئيس الشعبة'];
+  final List<String> _roles = ['فني السلامة العامة', 'المدير', 'رئيس الشعبة'];
 
   Future<void> _signUp() async {
     if (_formKey.currentState!.validate()) {
@@ -30,33 +30,32 @@ class _SignUpPageState extends State<SignUpPage> {
       final role = _selectedRole;
 
       try {
-        bool isManager = role == 'المدير';
-        bool allowManager = true;
-
-        if (isManager) {
-          final existingAdmin = await Supabase.instance.client
-              .from('users')
-              .select()
-              .eq('role', 'المدير')
-              .maybeSingle();
+        if (role == 'المدير') {
+          final existingAdmin =
+              await Supabase.instance.client
+                  .from('users')
+                  .select()
+                  .eq('role', 'المدير')
+                  .maybeSingle();
 
           if (existingAdmin != null) {
-            allowManager = false;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'يوجد بالفعل حساب مدير. لا يمكن إنشاء أكثر من حساب مدير.',
+                ),
+              ),
+            );
+            return;
           }
         }
 
-        if (!allowManager) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('يوجد بالفعل حساب مدير. لا يمكن إنشاء أكثر من حساب مدير.')),
-          );
-          return;
-        }
-
-        final AuthResponse response = await Supabase.instance.client.auth
-            .signUp(email: email, password: password);
+        final response = await Supabase.instance.client.auth.signUp(
+          email: email,
+          password: password,
+        );
 
         final user = response.user;
-
         if (user != null) {
           await Supabase.instance.client.from('users').insert({
             'id': user.id,
@@ -64,17 +63,21 @@ class _SignUpPageState extends State<SignUpPage> {
             'email': email,
             'role': role,
             'created_at': DateTime.now().toIso8601String(),
-            'is_approved': isManager ? true : false,
+            'is_approved': role == 'المدير' ? true : false,
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('تم إرسال طلب إنشاء الحساب بانتظار الموافقة')),
+            SnackBar(
+              content: Text(
+                role == 'المدير'
+                    ? 'تم إنشاء حساب المدير بنجاح'
+                    : 'تم إرسال طلب إنشاء الحساب بانتظار الموافقة',
+              ),
+            ),
           );
 
           _formKey.currentState?.reset();
-          setState(() {
-            _selectedRole = null;
-          });
+          setState(() => _selectedRole = null);
         }
       } catch (error) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -118,7 +121,10 @@ class _SignUpPageState extends State<SignUpPage> {
                     SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: _signUp,
-                      child: Text('إنشاء الحساب', style: TextStyle(color: Colors.white)),
+                      child: Text(
+                        'إنشاء الحساب',
+                        style: TextStyle(color: Colors.white),
+                      ),
                       style: ElevatedButton.styleFrom(
                         minimumSize: Size(400, 50),
                         backgroundColor: Color(0xff00408b),
@@ -130,11 +136,18 @@ class _SignUpPageState extends State<SignUpPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text('لديك حساب؟',
-                              style: theme.textTheme.bodyLarge?.copyWith(color: Colors.black87)),
+                          Text(
+                            'لديك حساب؟',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: Colors.black87,
+                            ),
+                          ),
                           TextButton(
                             onPressed: () {
-                              Navigator.pushNamed(context, SignInPage.signinRoute);
+                              Navigator.pushNamed(
+                                context,
+                                SignInPage.signinRoute,
+                              );
                             },
                             child: Text(
                               'تسجيل الدخول',
@@ -157,7 +170,11 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  Widget buildField(String label, TextEditingController controller, ThemeData theme) {
+  Widget buildField(
+    String label,
+    TextEditingController controller,
+    ThemeData theme,
+  ) {
     return SizedBox(
       width: 400.0,
       child: TextFormField(
@@ -167,7 +184,9 @@ class _SignUpPageState extends State<SignUpPage> {
           hintText: 'ادخل $label',
           floatingLabelAlignment: FloatingLabelAlignment.start,
         ),
-        validator: (value) => (value == null || value.isEmpty) ? 'الرجاء إدخال $label' : null,
+        validator:
+            (value) =>
+                (value == null || value.isEmpty) ? 'الرجاء إدخال $label' : null,
         textAlign: TextAlign.right,
       ),
     );
@@ -246,7 +265,9 @@ class _SignUpPageState extends State<SignUpPage> {
           floatingLabelAlignment: FloatingLabelAlignment.start,
           prefixIcon: IconButton(
             icon: Icon(
-              _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+              _isConfirmPasswordVisible
+                  ? Icons.visibility
+                  : Icons.visibility_off,
               color: Color(0xff00408b),
             ),
             onPressed: () {
@@ -279,15 +300,16 @@ class _SignUpPageState extends State<SignUpPage> {
           labelText: 'الدور',
           floatingLabelAlignment: FloatingLabelAlignment.start,
         ),
-        items: _roles.map((role) {
-          return DropdownMenuItem(
-            value: role,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Text(role),
-            ),
-          );
-        }).toList(),
+        items:
+            _roles.map((role) {
+              return DropdownMenuItem(
+                value: role,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(role),
+                ),
+              );
+            }).toList(),
         onChanged: (value) {
           setState(() {
             _selectedRole = value;
