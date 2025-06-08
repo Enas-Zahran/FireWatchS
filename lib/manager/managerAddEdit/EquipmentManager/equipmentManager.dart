@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/toolDetails.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/addSafteyTool.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/editSafteyTool.dart';
+import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/Permessions/exportRequests.dart';
 //Todo السعر لازم يتغير تلقائي حسب النوع 
 class AllToolsPage extends StatefulWidget {
   static const String routeName = '/all-tools';
@@ -76,6 +77,15 @@ class _AllToolsPageState extends State<AllToolsPage> {
 
         actions: [
           IconButton(icon: const Icon(Icons.add), onPressed: _goToAddTool),
+           IconButton(
+      icon: const Icon(Icons.check, color: Colors.white),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ExportRequestsPage(), 
+          ),);}
+        )
         ],
       ),
       body:
@@ -154,7 +164,7 @@ class _AllToolsPageState extends State<AllToolsPage> {
                                                         ),
                                                       );
                                                   if (result == true)
-                                                    await _fetchTools(); // لتحديث القائمة بعد التعديل
+                                                    await _fetchTools(); 
                                                 },
 
                                                 icon: const Icon(
