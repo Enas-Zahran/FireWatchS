@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:FireWatch/My/InputDecoration.dart';
+import 'package:FireWatch/manager/managerAddEdit/UsersManger/usersApprovalDetails.dart';
 
 class PendingApprovalsPage extends StatefulWidget {
   static const String routeName = 'pendingApprovals';
@@ -25,7 +25,6 @@ class _PendingApprovalsPageState extends State<PendingApprovalsPage> {
         .from('users')
         .select()
         .eq('is_approved', false);
-
     setState(() {
       pendingUsers = List<Map<String, dynamic>>.from(data);
       _loading = false;
@@ -75,7 +74,15 @@ class _PendingApprovalsPageState extends State<PendingApprovalsPage> {
                         title: Text(user['name'] ?? ''),
                         subtitle: Text('${user['email']} - ${user['role']}'),
                         onTap: () {
-                          // TODO: Navigate to approval detail page
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => UserApprovalDetailPage(
+                                    userId: user['id'],
+                                  ),
+                            ),
+                          );
                         },
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
