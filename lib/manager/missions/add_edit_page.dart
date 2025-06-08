@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:FireWatch/manager/managerAddEdit/UsersManger/usersManager.dart';
-import 'package:FireWatch/manager/managerAddEdit/equipmentManager.dart';
+import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/equipmentManager.dart';
 import 'package:FireWatch/manager/managerAddEdit/pricesManager.dart';
 import 'package:FireWatch/manager/managerAddEdit/locationManger.dart';
 
@@ -42,7 +42,7 @@ class AddEditPage extends StatelessWidget {
             context,
             title: 'المعدات',
             icon: Icons.build,
-            destination: const EquipmentPage(),
+            destination:  AllToolsPage(),
           ),
           const SizedBox(height: 12),
           _buildTile(

@@ -108,27 +108,58 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
             style: TextStyle(color: Colors.white),
           ),
           backgroundColor: const Color(0xff00408b),
+
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             IconButton(
               icon: const Icon(Icons.search),
               onPressed: () {
-                showModalBottomSheet(
+                showDialog(
                   context: context,
                   builder:
-                      (_) => Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: (_) => setState(() => _applyFilters()),
-                          decoration: customInputDecoration.copyWith(
-                            labelText: 'ابحث باسم المستخدم',
+                      (context) => Align(
+                        alignment: Alignment.topCenter,
+                        child: Material(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: MediaQuery.of(context).size.width * 0.9,
+                            padding: const EdgeInsets.all(16),
+                            margin: const EdgeInsets.only(top: 40),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('أدخل اسم المستخدم'),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _searchController,
+                                  onChanged:
+                                      (_) => setState(() => _applyFilters()),
+                                  decoration: InputDecoration(
+                                    hintText: 'ابحث...',
+                                    prefixIcon: const Icon(Icons.search),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                ElevatedButton(
+                                  child: const Text('إغلاق'),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                 );
               },
             ),
+
             Builder(
               builder:
                   (context) => IconButton(
