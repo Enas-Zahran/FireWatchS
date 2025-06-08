@@ -1,9 +1,8 @@
-// ManagerUserListPage with multi-select filters in Drawer
-
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:FireWatch/My/InputDecoration.dart';
 import 'package:FireWatch/manager/managerAddEdit/UsersManger/pendingApprovals.dart';
+import 'package:FireWatch/manager/managerAddEdit/UsersManger/editUser.dart';
 
 class ManagerUserListPage extends StatefulWidget {
   static const String routeName = 'managerUserList';
@@ -46,7 +45,8 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
     final data = await Supabase.instance.client
         .from('users')
         .select()
-        .eq('is_approved', true);
+        .eq('is_approved', true)
+        .neq('role', 'المدير');
     allUsers = List<Map<String, dynamic>>.from(data);
     _applyFilters();
     _loading = false;
@@ -80,8 +80,10 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
               selectedWorkPlaces.contains(user['work_place']?.toString());
           final matchesName =
               searchName.isEmpty ||
-              (user['name']?.toString().toLowerCase().contains(searchName.toLowerCase()) ?? false);
-
+              (user['name']?.toString().toLowerCase().contains(
+                    searchName.toLowerCase(),
+                  ) ??
+                  false);
 
           return matchesTask &&
               matchesTool &&
@@ -134,14 +136,16 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
                     onPressed: () => Scaffold.of(context).openEndDrawer(),
                   ),
             ),
-
             IconButton(
               icon: const Icon(Icons.check),
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => PendingApprovalsPage()),
                 );
+                if (result == true) {
+                  _fetchUsers();
+                }
               },
             ),
           ],
@@ -217,12 +221,79 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
                                   subtitle: Text(
                                     '${user['email']} - ${user['role']}',
                                   ),
-                                  trailing: IconButton(
-                                    icon: const Icon(
-                                      Icons.edit,
-                                      color: Colors.blue,
-                                    ),
-                                    onPressed: () {},
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.edit,
+                                          color: Colors.blue,
+                                        ),
+                                        onPressed: () async {
+                                          final result = await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (context) => EditUserPage(
+                                                    userId: user['id'],
+                                                  ),
+                                            ),
+                                          );
+                                          if (result == true) {
+                                            _fetchUsers();
+                                          }
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.red,
+                                        ),
+                                        onPressed: () async {
+                                          final confirm = await showDialog<
+                                            bool
+                                          >(
+                                            context: context,
+                                            builder:
+                                                (context) => AlertDialog(
+                                                  title: const Text(
+                                                    'تأكيد الحذف',
+                                                  ),
+                                                  content: const Text(
+                                                    'هل أنت متأكد من حذف هذا المستخدم؟',
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            context,
+                                                            false,
+                                                          ),
+                                                      child: const Text(
+                                                        'إلغاء',
+                                                      ),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed:
+                                                          () => Navigator.pop(
+                                                            context,
+                                                            true,
+                                                          ),
+                                                      child: const Text('نعم'),
+                                                    ),
+                                                  ],
+                                                ),
+                                          );
+                                          if (confirm == true) {
+                                            await Supabase.instance.client
+                                                .from('users')
+                                                .delete()
+                                                .eq('id', user['id']);
+                                            await _fetchUsers();
+                                          }
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ),
                               );

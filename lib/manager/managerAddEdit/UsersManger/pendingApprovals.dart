@@ -36,12 +36,26 @@ class _PendingApprovalsPageState extends State<PendingApprovalsPage> {
         .from('users')
         .update({'is_approved': true})
         .eq('id', id);
-    _fetchPendingUsers();
+
+    // ✅ Refresh local list
+    await _fetchPendingUsers();
+
+    // ✅ Return to previous page to trigger refresh if no more pending users
+    if (pendingUsers.isEmpty) {
+      Navigator.of(context).pop(true);
+    }
   }
 
   Future<void> _deleteUser(String id) async {
     await Supabase.instance.client.from('users').delete().eq('id', id);
-    _fetchPendingUsers();
+
+    // ✅ Refresh local list
+    await _fetchPendingUsers();
+
+    // ✅ Return if all users deleted
+    if (pendingUsers.isEmpty) {
+      Navigator.of(context).pop(true);
+    }
   }
 
   @override
@@ -73,8 +87,8 @@ class _PendingApprovalsPageState extends State<PendingApprovalsPage> {
                       child: ListTile(
                         title: Text(user['name'] ?? ''),
                         subtitle: Text('${user['email']} - ${user['role']}'),
-                        onTap: () {
-                          Navigator.push(
+                        onTap: () async {
+                          final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder:
@@ -83,6 +97,14 @@ class _PendingApprovalsPageState extends State<PendingApprovalsPage> {
                                   ),
                             ),
                           );
+
+                          // ✅ If user approved inside detail page, refresh
+                          if (result == true) {
+                            await _fetchPendingUsers();
+                            if (pendingUsers.isEmpty) {
+                              Navigator.of(context).pop(true);
+                            }
+                          }
                         },
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -92,7 +114,9 @@ class _PendingApprovalsPageState extends State<PendingApprovalsPage> {
                                 Icons.check,
                                 color: Colors.green,
                               ),
-                              onPressed: () => _approveUser(user['id']),
+                              onPressed: () async {
+                                await _approveUser(user['id']);
+                              },
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
@@ -123,8 +147,9 @@ class _PendingApprovalsPageState extends State<PendingApprovalsPage> {
                                         ],
                                       ),
                                 );
+
                                 if (confirm == true) {
-                                  _deleteUser(user['id']);
+                                  await _deleteUser(user['id']);
                                 }
                               },
                             ),
