@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:FireWatch/manager/managerAddEdit/PriceManager/addPrice.dart';
 class PriceDashboardPage extends StatelessWidget {
   static const routeName = '/price-dashboard';
 
@@ -31,7 +31,10 @@ class PriceDashboardPage extends StatelessWidget {
               title: 'أدوات السلامة',
               icon: Icons.security,
               onTap: () {
-                // TODO: Navigate to Safety Tool Prices Page
+              Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => AddToolPricePage()),
+);
               },
             ),
             const SizedBox(height: 12),

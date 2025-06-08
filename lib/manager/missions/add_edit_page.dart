@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:FireWatch/manager/managerAddEdit/UsersManger/usersManager.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/equipmentManager.dart';
-import 'package:FireWatch/manager/managerAddEdit/PriceManager/pricesManager.dart';
+import 'package:FireWatch/manager/managerAddEdit/PriceManager/toolPriceList.dart';
 import 'package:FireWatch/manager/managerAddEdit/locationManger.dart';
 
 class AddEditPage extends StatelessWidget {
@@ -49,7 +49,7 @@ class AddEditPage extends StatelessWidget {
             context,
             title: 'الأسعار',
             icon: Icons.attach_money,
-            destination:  PriceDashboardPage(),
+            destination:  ToolPricesListPage(),
           ),
           const SizedBox(height: 12),
           _buildTile(
