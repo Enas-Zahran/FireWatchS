@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:FireWatch/manager/managerAddEdit/PriceManager/editToolPrice.dart'; 
-import 'package:FireWatch/manager/managerAddEdit/PriceManager/addPrice.dart';
+import 'package:FireWatch/manager/managerAddEdit/PriceManager/tools/editToolPrice.dart'; 
+import 'package:FireWatch/manager/managerAddEdit/PriceManager/tools/addPrice.dart';
 class ToolPricesListPage extends StatefulWidget {
   const ToolPricesListPage({super.key});
 

@@ -47,25 +47,28 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
       _purchaseDate!.day,
     );
 
-    await Supabase.instance.client.from('safety_tools').insert({
-      'name': _nameController.text.trim(),
-      'type': _selectedType,
-      'material_type': _selectedMaterial,
-      'capacity': _selectedCapacity,
-      'price': 0,
-      'purchase_date': _purchaseDate!.toIso8601String(),
-      'last_maintenance_date': DateTime.now().toIso8601String(),
-      'next_maintenance_date': nextMaintenanceDate.toIso8601String(),
-    });
+    try {
+      await Supabase.instance.client.from('safety_tools').insert({
+        'name': _nameController.text.trim(),
+        'type': _selectedType,
+        'material_type': _selectedMaterial,
+        'capacity': _selectedCapacity,
+        'purchase_date': _purchaseDate!.toIso8601String(),
+        'last_maintenance_date': DateTime.now().toIso8601String(),
+        'next_maintenance_date': nextMaintenanceDate.toIso8601String(),
+      });
 
-    if (!mounted) return;
-    Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطأ أثناء الإضافة: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xff00408b),
@@ -85,7 +88,7 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
                   buildDropdown(
                     label: 'نوع أداة السلامة',
                     value: _selectedType,
-                    items: ['fire extinguisher', 'hose reel', 'fire hydrant'],
+                    items: materialOptions.keys.toList(),
                     onChanged: (val) {
                       setState(() {
                         _selectedType = val;

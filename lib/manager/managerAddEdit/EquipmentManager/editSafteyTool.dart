@@ -15,8 +15,6 @@ class EditSafetyToolPage extends StatefulWidget {
 class _EditSafetyToolPageState extends State<EditSafetyToolPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _priceController = TextEditingController();
-
   String? _selectedType;
   String? _selectedMaterial;
   String? _selectedCapacity;
@@ -47,7 +45,6 @@ class _EditSafetyToolPageState extends State<EditSafetyToolPage> {
     super.initState();
     final tool = widget.tool;
     _nameController.text = tool['name'] ?? '';
-    _priceController.text = (tool['price'] ?? '').toString();
     _selectedType = tool['type'];
     _selectedMaterial = tool['material_type'];
     _selectedCapacity = tool['capacity'];
@@ -70,13 +67,15 @@ class _EditSafetyToolPageState extends State<EditSafetyToolPage> {
           'type': _selectedType,
           'material_type': _selectedMaterial,
           'capacity': _selectedCapacity,
-          'price': double.tryParse(_priceController.text.trim()) ?? 0,
           'purchase_date': _purchaseDate!.toIso8601String(),
           'next_maintenance_date': nextMaintenanceDate.toIso8601String(),
         })
         .eq('id', widget.tool['id']);
 
     if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تم تعديل الأداة بنجاح')),
+    );
     Navigator.pop(context, true);
   }
 
@@ -129,10 +128,10 @@ class _EditSafetyToolPageState extends State<EditSafetyToolPage> {
                       label: 'السعة',
                       value: _selectedCapacity,
                       items: capacityOptions[_selectedMaterial!]!,
-                      onChanged: (val) => setState(() => _selectedCapacity = val),
+                      onChanged: (val) {
+                        setState(() => _selectedCapacity = val);
+                      },
                     ),
-                  const SizedBox(height: 12),
-                  buildTextField('السعر', _priceController, isNumeric: true),
                   const SizedBox(height: 12),
                   ListTile(
                     tileColor: Colors.grey.shade200,
@@ -173,21 +172,16 @@ class _EditSafetyToolPageState extends State<EditSafetyToolPage> {
     );
   }
 
-  Widget buildTextField(String label, TextEditingController controller, {bool isNumeric = false}) {
+  Widget buildTextField(String label, TextEditingController controller) {
     return SizedBox(
       width: 400,
       child: TextFormField(
         controller: controller,
-        keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
         decoration: customInputDecoration.copyWith(
           labelText: label,
           hintText: 'أدخل $label',
         ),
-        validator: (val) {
-          if (val == null || val.isEmpty) return 'يرجى إدخال $label';
-          if (isNumeric && double.tryParse(val) == null) return 'يرجى إدخال رقم صالح';
-          return null;
-        },
+        validator: (val) => val == null || val.isEmpty ? 'يرجى إدخال $label' : null,
         textAlign: TextAlign.right,
       ),
     );

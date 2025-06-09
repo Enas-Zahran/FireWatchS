@@ -20,20 +20,36 @@ class _EditToolPricePageState extends State<EditToolPricePage> {
     _priceController = TextEditingController(text: widget.priceEntry['price'].toString());
   }
 
-  Future<void> _updatePrice() async {
-    if (!_formKey.currentState!.validate()) return;
+ Future<void> _updatePrice() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    await Supabase.instance.client
-        .from('safety_tool_prices')
-        .update({'price': double.parse(_priceController.text.trim())})
-        .eq('id', widget.priceEntry['id']);
+  final newPrice = double.parse(_priceController.text.trim());
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم تحديث السعر بنجاح')),
-    );
-    Navigator.pop(context);
-  }
+  final toolType = widget.priceEntry['tool_type'];
+  final materialType = widget.priceEntry['material_type'];
+  final capacity = widget.priceEntry['capacity'];
+
+  // 1. تحديث جدول الأسعار
+  await Supabase.instance.client
+      .from('safety_tool_prices')
+      .update({'price': newPrice})
+      .eq('id', widget.priceEntry['id']);
+
+  // 2. تحديث جميع الأدوات المرتبطة بنفس النوع والمادة والسعة
+  await Supabase.instance.client
+      .from('safety_tools')
+      .update({'price': newPrice})
+      .eq('type', toolType)
+      .eq('material_type', materialType)
+      .eq('capacity', capacity);
+
+  if (!mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('تم تحديث السعر بنجاح')),
+  );
+  Navigator.pop(context);
+}
+
 
   @override
   Widget build(BuildContext context) {

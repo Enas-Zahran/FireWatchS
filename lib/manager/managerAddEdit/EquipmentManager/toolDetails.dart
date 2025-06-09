@@ -24,14 +24,18 @@ class ToolDetailsPage extends StatelessWidget {
     final type = tool['type'] ?? '';
     final material = tool['material_type'] ?? '';
     final capacity = tool['capacity'] ?? '';
+    final price = (tool['price'] as num?)?.toDouble();
     final lastMaintenance = formatDate(tool['last_maintenance_date']);
     final nextMaintenance = formatDate(tool['next_maintenance_date']);
-    final totalCost = tool['total_cost']?.toString() ?? '0.00';
+
+    final priceText = price != null ? '${price.toStringAsFixed(2)} د.أ' : 'غير متاح';
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xff00408b),
-        title: Center(child: Text(name, style: const TextStyle(color: Colors.white))),
+        title: Center(
+          child: Text(name, style: const TextStyle(color: Colors.white)),
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Center(
@@ -45,8 +49,9 @@ class ToolDetailsPage extends StatelessWidget {
                 buildInfoTile('السعة', capacity),
                 buildInfoTile('آخر صيانة تمت', lastMaintenance),
                 buildInfoTile('الصيانة القادمة', nextMaintenance),
-
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
+                buildInfoTile('السعر الأساسي', priceText, bold: true),
+                const SizedBox(height: 40),
                 SizedBox(
                   width: 400,
                   child: ElevatedButton(
@@ -58,10 +63,7 @@ class ToolDetailsPage extends StatelessWidget {
                         ),
                       );
                     },
-                    child: const Text(
-                      'عرض جميع التقارير',
-                      style: TextStyle(color: Colors.white),
-                    ),
+                    child: const Text('عرض جميع التقارير', style: TextStyle(color: Colors.white)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xff00408b),
                       minimumSize: const Size(400, 50),
@@ -80,21 +82,12 @@ class ToolDetailsPage extends StatelessWidget {
                         ),
                       );
                     },
-                    child: const Text(
-                      'عرض جميع الإجراءات',
-                      style: TextStyle(color: Colors.white),
-                    ),
+                    child: const Text('عرض جميع الإجراءات', style: TextStyle(color: Colors.white)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xff00408b),
                       minimumSize: const Size(400, 50),
                     ),
                   ),
-                ),
-                const SizedBox(height: 40),
-                buildInfoTile(
-                  'المبلغ الإجمالي المدفوع',
-                  '$totalCost د.أ',
-                  bold: true,
                 ),
               ],
             ),
@@ -111,7 +104,6 @@ class ToolDetailsPage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
           children: [
             Text(
               value,
@@ -122,7 +114,7 @@ class ToolDetailsPage extends StatelessWidget {
               ),
             ),
             Text(
-              '$label',
+              label,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ],

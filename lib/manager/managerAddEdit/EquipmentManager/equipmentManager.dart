@@ -161,8 +161,11 @@ class _AllToolsPageState extends State<AllToolsPage> {
                                                                   EditSafetyToolPage(
                                                                     tool: tool,
                                                                   ),
+
                                                         ),
+                                                        
                                                       );
+
                                                   if (result == true)
                                                     await _fetchTools(); 
                                                 },
