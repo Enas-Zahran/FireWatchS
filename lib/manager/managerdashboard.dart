@@ -62,7 +62,7 @@ class ManagerDashboard extends StatelessWidget {
             context,
             title: 'المهام',
             icon: Icons.task_alt,
-            destination: const TasksPage(),
+            destination: const TasksMainPage(),
           ),
           const SizedBox(height: 12),
           _buildTile(

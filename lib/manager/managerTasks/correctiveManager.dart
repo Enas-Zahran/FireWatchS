@@ -1,0 +1,304 @@
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class CorrectiveTasksPage extends StatefulWidget {
+  static const routeName = 'correctiveTasksPage';
+  const CorrectiveTasksPage({super.key});
+
+  @override
+  State<CorrectiveTasksPage> createState() => _CorrectiveTasksPageState();
+}
+
+class _CorrectiveTasksPageState extends State<CorrectiveTasksPage> {
+  final supabase = Supabase.instance.client;
+
+  final TextEditingController _techSearchController = TextEditingController();
+  final TextEditingController _toolSearchController = TextEditingController();
+
+  String? selectedTechnicianId;
+  String? selectedTechnicianName;
+  List<Map<String, dynamic>> technicians = [];
+  List<Map<String, dynamic>> reports = [];
+  List<Map<String, dynamic>> locations = [];
+  List<String> selectedReportIds = [];
+  List<Map<String, dynamic>> assignments = [];
+  Map<String, int> taskCounts = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocations().then((_) async {
+      await _fetchTaskCounts();
+      _fetchTechnicians();
+      _fetchReports();
+    });
+  }
+
+  Future<void> _fetchTaskCounts() async {
+    final periodic = await supabase.from('periodic_tasks').select('assigned_to');
+    final corrective = await supabase.from('corrective_tasks').select('assigned_to');
+    final emergency = await supabase.from('emergency_tasks').select('assigned_to');
+
+    final all = [...periodic, ...corrective, ...emergency];
+    final counts = <String, int>{};
+    for (final task in all) {
+      final id = task['assigned_to'];
+      if (id != null) {
+        counts[id] = (counts[id] ?? 0) + 1;
+      }
+    }
+    setState(() => taskCounts = counts);
+  }
+
+  Future<void> _fetchLocations() async {
+    final response = await supabase.from('locations').select('id, name, code');
+    locations = List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<void> _fetchTechnicians() async {
+    final response = await supabase
+        .from('users')
+        .select('id, name')
+        .eq('role', 'فني السلامة العامة');
+
+    setState(() {
+      technicians = List<Map<String, dynamic>>.from(response).map((tech) {
+        final count = taskCounts[tech['id']] ?? 0;
+        return {
+          'id': tech['id'],
+          'name': tech['name'],
+          'assignedPercent': '$count مهمة',
+        };
+      }).toList();
+    });
+  }
+
+  Future<void> _fetchReports() async {
+    final response = await supabase
+        .from('emergency_requests')
+        .select()
+        .eq('is_approved', true)
+        .eq('task_type', 'علاجي');
+
+    assignments = await supabase.from('corrective_tasks').select('report_id, assigned_to');
+
+    setState(() {
+      reports = List<Map<String, dynamic>>.from(response).map((report) {
+        final assignment = assignments.firstWhere(
+          (a) => a['report_id'] == report['id'],
+          orElse: () => {},
+        );
+        final isAssigned = assignment.isNotEmpty;
+        final assignedTo = assignment['assigned_to'];
+        return {
+          'id': report['id'],
+          'tool': report['tool_code'],
+          'reason': report['usage_reason'],
+          'action': report['action_taken'],
+          'assigned': isAssigned,
+          'assignedTo': assignedTo,
+          'locationName': _getLocationNameFromToolName(report['tool_code']),
+        };
+      }).toList();
+    });
+  }
+
+  String _getLocationNameFromToolName(String? toolName) {
+    if (toolName == null || toolName.isEmpty) return 'غير معروف';
+    final firstChar = toolName[0].toUpperCase();
+    final match = locations.firstWhere(
+      (loc) => (loc['code'] ?? '').toString().toUpperCase() == firstChar,
+      orElse: () => {},
+    );
+    return match['name'] ?? 'غير معروف';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredTechnicians = technicians.where((tech) {
+      return tech['name'].contains(_techSearchController.text);
+    }).toList();
+
+    final keyword = _toolSearchController.text.trim();
+    final filteredReports = reports.where((report) {
+      return report['tool'].contains(keyword) ||
+          (report['locationName'] ?? '').startsWith(keyword);
+    }).toList();
+
+    final selectedRatio = filteredReports.isEmpty
+        ? '0%'
+        : '${((selectedReportIds.length / filteredReports.length) * 100).toStringAsFixed(0)}%';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('المهام العلاجية', style: TextStyle(color: Colors.white)),
+        centerTitle: true,
+        backgroundColor: const Color(0xff00408b),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          children: [
+            Text('عدد البلاغات المحددة: ${selectedReportIds.length} من ${filteredReports.length} ($selectedRatio)'),
+            if (selectedTechnicianName != null)
+              Text('$selectedTechnicianName : الفني المحدد'),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            selectedReportIds = filteredReports.map((r) => r['id'] as String).toList();
+                          });
+                        },
+                        child: const Text('تحديد الكل'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            selectedReportIds.clear();
+                          });
+                        },
+                        child: const Text('إلغاء التحديد الكلي'),
+                      ),
+                      TextField(
+                        controller: _toolSearchController,
+                        decoration: const InputDecoration(
+                          labelText: '🔍 اكتب أول حرف من الموقع أو اسم الأداة',
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _techSearchController,
+                    decoration: const InputDecoration(
+                      labelText: '🔍 ابحث عن اسم الفني',
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ListView(
+                      children: filteredReports.map((report) {
+                        final reportId = report['id'];
+                        final isSelected = selectedReportIds.contains(reportId);
+                        final assignedTo = report['assignedTo'];
+                        final assignedToAnother = assignedTo != null && assignedTo != selectedTechnicianId;
+                        final assignedToThisTech = assignedTo != null && assignedTo == selectedTechnicianId;
+                        return ListTile(
+                          tileColor: assignedToAnother
+                              ? Colors.red[100]
+                              : assignedToThisTech
+                                  ? Colors.green[100]
+                                  : null,
+                          title: Text('${report['tool']} - ${report['locationName']}'),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('الخلل: ${report['reason']}'),
+                              Text('الإجراء: ${report['action']}'),
+                              if (assignedToAnother)
+                                const Text('❗ تم إسناد هذا البلاغ لمستخدم آخر'),
+                            ],
+                          ),
+                          trailing: Checkbox(
+                            value: isSelected,
+                            onChanged: (val) {
+                              setState(() {
+                                if (isSelected) {
+                                  selectedReportIds.remove(reportId);
+                                } else {
+                                  selectedReportIds.add(reportId);
+                                }
+                              });
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ListView(
+                      children: filteredTechnicians.map((tech) {
+                        return Card(
+                          color: selectedTechnicianId == tech['id'] ? Colors.blue[100] : null,
+                          child: ListTile(
+                            title: Text(tech['name']),
+                            subtitle: Text('عدد المهام: ${tech['assignedPercent']}'),
+                            onTap: () {
+                              setState(() {
+                                selectedTechnicianId = tech['id'];
+                                selectedTechnicianName = tech['name'];
+                              });
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ElevatedButton(
+              onPressed: selectedTechnicianId != null && selectedReportIds.isNotEmpty
+                  ? () => _showConfirmationDialog(context)
+                  : null,
+              child: const Text('إضافة المهام'),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('تأكيد الإسناد'),
+        content: const Text('هل أنت متأكد من اضافة هذه المهام لهذا المستخدم؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('لا')),
+          TextButton(
+            onPressed: () async {
+              for (final reportId in selectedReportIds) {
+                await supabase.from('corrective_tasks').insert({
+                  'report_id': reportId,
+                  'assigned_to': selectedTechnicianId,
+                  'assigned_by': supabase.auth.currentUser!.id,
+                  'due_date': DateTime.now().add(const Duration(days: 6)).toIso8601String(),
+                });
+              }
+              Navigator.pop(context);
+              setState(() => selectedReportIds.clear());
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إسناد المهام بنجاح')));
+              await _fetchTaskCounts();
+              _fetchTechnicians();
+              _fetchReports();
+            },
+            child: const Text('نعم'),
+          )
+        ],
+      ),
+    );
+  }
+}
