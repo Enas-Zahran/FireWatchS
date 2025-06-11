@@ -1,74 +1,108 @@
 import 'package:flutter/material.dart';
-import 'priority/dawry_page.dart';
-import 'priority/elaji_page.dart';
-import 'priority/taree_page.dart';
-import 'package:FireWatch/All/addemergency.dart';
+import 'package:FireWatch/technician/techNotifications.dart';
+import 'package:FireWatch/technician/TechnichanCorrective.dart';
+import 'package:FireWatch/technician/TechnichanEmergency.dart';
+import 'package:FireWatch/technician/addTechReports/addEmergency.dart';
+import 'package:FireWatch/technician/addTechReports/addCorrective.dart';
+import 'package:FireWatch/technician/TechnichanPeriodic/Locations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+class TechnicianDashboardPage extends StatelessWidget {
+  static const String routeName = 'technicianTasksMainPage';
 
-//Todo notifications icon
-class TechnicianDashboard extends StatelessWidget {
-  static const String techniciandashboardRoute = 'techniciandashboard';
+  const TechnicianDashboardPage({super.key});
 
-  const TechnicianDashboard({super.key});
+  void _showAddOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.warning),
+            title: const Text('اضافة طارئ'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddEmergencyTaskTechnicianPage(),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.build),
+            title: const Text('اضافة علاجي'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddCorrectiveTaskTechnicianPage(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color(0xff00408b),
-        title: Center(
-          child: const Text(
-            'لوحة تحكم الفني',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: AlertDialog(
-                    title: Text('تأكيد'),
-                    content: Text('هل أنت متأكد من الرجوع لصفحة الدخول؟'),
-                    actions: <Widget>[
-                      TextButton(
-                        child: Text('إلغاء'),
-                        onPressed: () {
-                          Navigator.of(context).pop(); // Close dialog
-                        },
-                      ),
-                      TextButton(
-                        child: Text('نعم'),
-                        onPressed: () {
-                          Navigator.of(context).pop(); // Close dialog first
-                          Navigator.of(context).popUntil(
-                            (route) => route.isFirst,
-                          ); 
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+        backgroundColor: const Color(0xff00408b),
+        title: const Center(
+          child: Text('لوحة مهام   ', style: TextStyle(color: Colors.white)),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white),
-            onPressed: () {
-              // Handle notifications here
-            },
-          ),
-          IconButton(
             icon: const Icon(Icons.add, color: Colors.white),
-            onPressed: () {
-              Navigator.pushNamed(context, AddEmergencyPage.addEmergencyRoute);
+            onPressed: () => _showAddOptions(context),
+          ),
+         IconButton(
+  icon: const Icon(Icons.notifications, color: Colors.white),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TechnicianNotificationsPage(),
+      ),
+    );
+  },
+),
+
+        ],
+     leading: IconButton(
+  icon: const Icon(Icons.arrow_back, color: Colors.white),
+  onPressed: () {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تأكيد تسجيل الخروج'),
+        content: const Text('سيتم تسجيل خروجك من الحساب. هل أنت متأكد؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('لا'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await Supabase.instance.client.auth.signOut();
+              if (context.mounted) {
+                Navigator.pop(context); // Close dialog
+                Navigator.pop(context); // Go back (or navigate to login)
+              }
             },
+            child: const Text('نعم'),
           ),
         ],
+      ),
+    );
+  },
+),
+
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(30, 50, 30, 30),
@@ -76,23 +110,22 @@ class TechnicianDashboard extends StatelessWidget {
           _buildTile(
             context,
             title: 'دوري',
-
-            icon: Icons.schedule,
-            destination: TechnicianDawriPage(),
+            icon: Icons.access_time,
+            destinationPage: const TechnicianPeriodicLocationsPage(),
           ),
           const SizedBox(height: 12),
           _buildTile(
             context,
             title: 'علاجي',
-            icon: Icons.medical_services,
-            destination: TechnicianElajiPage(),
+            icon: Icons.healing,
+            destinationPage: const TechnicianCorrectiveLocationsPage(),
           ),
           const SizedBox(height: 12),
           _buildTile(
             context,
             title: 'طارئ',
-            icon: Icons.warning,
-            destination: TechnicianEmergencyPage(),
+            icon: Icons.report,
+            destinationPage: const TechnicianEmergencyLocationsPage(),
           ),
         ],
       ),
@@ -103,18 +136,19 @@ class TechnicianDashboard extends StatelessWidget {
     BuildContext context, {
     required String title,
     required IconData icon,
-    required Widget destination,
+    required Widget destinationPage,
   }) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 4,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap:
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => destination),
-            ),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => destinationPage),
+          );
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(

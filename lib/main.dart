@@ -94,8 +94,8 @@ class MyApp extends StatelessWidget {
         // ResetPasswordRequestPage.routeName: (context) => ResetPasswordRequestPage(),
         // ChangePasswordPage.routeName: (context) => ChangePasswordPage(),
         //technician
-        TechnicianDashboard.techniciandashboardRoute:
-            (context) => TechnicianDashboard(),
+        TechnicianDashboardPage.routeName:
+            (context) => TechnicianDashboardPage(),
         //manager
         ManagerDashboard.managerDashboardRoute: (context) => ManagerDashboard(),
         //head

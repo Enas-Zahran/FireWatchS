@@ -76,7 +76,7 @@ class ManagerDashboard extends StatelessWidget {
             context,
             title: 'التقارير',
             icon: Icons.insert_chart,
-            destination: const ReportsPage(),
+            destination: const ReportsDashboardPage(),
           ),
         ],
       ),

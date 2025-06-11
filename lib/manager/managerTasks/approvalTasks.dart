@@ -24,9 +24,10 @@ class _PendingEmergencyRequestsPageState extends State<PendingEmergencyRequestsP
   Future<void> _loadRequests() async {
     setState(() => isLoading = true);
     try {
+      // Join user name from users table using created_by field
       final data = await supabase
           .from('emergency_requests')
-          .select()
+          .select('*, users:created_by(name)')
           .eq('is_approved', false)
           .neq('created_by_role', 'المدير');
 
@@ -129,6 +130,7 @@ class _PendingEmergencyRequestsPageState extends State<PendingEmergencyRequestsP
                                     ),
                                   ),
                                   const SizedBox(height: 8),
+                                  _info('اسم الفني', req['users']?['name']),
                                   _info('اسم الأداة', req['tool_code']),
                                   if (isTaree && req['covered_area'] != '-')
                                     _info('المساحة التي تمت تغطيتها', req['covered_area']),

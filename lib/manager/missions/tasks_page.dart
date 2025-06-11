@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:FireWatch/manager/managerTasks/addEmergency.dart';
-import 'package:FireWatch/manager/managerTasks/addCorrective.dart';
+import 'package:FireWatch/manager/managerTasks/addManagerReports/addEmergency.dart';
+import 'package:FireWatch/manager/managerTasks/addManagerReports/addCorrective.dart';
 import 'package:FireWatch/manager/managerTasks/approvalTasks.dart';
 import 'package:FireWatch/manager/managerTasks/periodicManager.dart';
 import 'package:FireWatch/manager/managerTasks/correctiveManager.dart';
 import 'package:FireWatch/manager/managerTasks/emergencyManager.dart';
+import 'package:FireWatch/manager/managerTasks/notificationsManager.dart';
 class TasksMainPage extends StatelessWidget {
   static const String routeName = 'tasksMainPage';
 
@@ -72,6 +73,17 @@ class TasksMainPage extends StatelessWidget {
             icon: const Icon(Icons.add, color: Colors.white),
             onPressed: () => _showAddOptions(context),
           ),
+          IconButton(
+  icon: const Icon(Icons.notifications, color: Colors.white),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const NotificationsPage(),
+      ),
+    );
+  },
+),
         ],
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),

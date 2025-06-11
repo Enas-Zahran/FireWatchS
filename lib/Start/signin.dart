@@ -71,7 +71,7 @@ class _SignInPageState extends State<SignInPage> {
             } else if (role == 'فني السلامة العامة') {
               Navigator.pushReplacementNamed(
                 context,
-                TechnicianDashboard.techniciandashboardRoute,
+                TechnicianDashboardPage.routeName,
               );
             } else if (role == 'رئيس الشعبة') {
               Navigator.pushReplacementNamed(
