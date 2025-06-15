@@ -64,6 +64,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
+           
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())

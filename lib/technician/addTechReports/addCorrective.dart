@@ -78,44 +78,47 @@ class _AddCorrectiveTaskTechnicianPageState extends State<AddCorrectiveTaskTechn
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Center(
-          child: Text('اضافة مهمة علاجية', style: TextStyle(color: Colors.white)),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Center(
+            child: Text('اضافة مهمة علاجية', style: TextStyle(color: Colors.white)),
+          ),
+          backgroundColor: const Color(0xff00408b),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
-        backgroundColor: const Color(0xff00408b),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
-          child: ListView(
-            children: [
-              _buildToolSearchField(),
-              const SizedBox(height: 16),
-              _buildField('الخلل الذي وجد *', _problemController),
-              const SizedBox(height: 16),
-              _buildField('من أخبر عنه (اختياري)', _informerController),
-              const SizedBox(height: 16),
-              _buildField('الإجراء المتخذ *', _actionController),
-              const SizedBox(height: 24),
-              Align(
-                alignment: Alignment.center,
-                child: Container(
-                  width: 400,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : _submit,
-                    child: isLoading
-                        ? const CircularProgressIndicator()
-                        : const Text('إرسال للموافقة'),
+        body: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+            child: ListView(
+              children: [
+                _buildToolSearchField(),
+                const SizedBox(height: 16),
+                _buildField('الخلل الذي وجد *', _problemController),
+                const SizedBox(height: 16),
+                _buildField('من أخبر عنه (اختياري)', _informerController),
+                const SizedBox(height: 16),
+                _buildField('الإجراء المتخذ *', _actionController),
+                const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.center,
+                  child: Container(
+                    width: 400,
+                    child: ElevatedButton(
+                      onPressed: isLoading ? null : _submit,
+                      child: isLoading
+                          ? const CircularProgressIndicator()
+                          : const Text('إرسال للموافقة'),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

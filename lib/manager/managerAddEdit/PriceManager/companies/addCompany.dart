@@ -52,62 +52,65 @@ class _AddExecutingCompanyPageState extends State<AddExecutingCompanyPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Center(child: Text('إضافة الشركة المنفذة', style: TextStyle(color: Colors.white))),
-        backgroundColor: const Color(0xff00408b),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                
-                controller: _nameController,
-                decoration: customInputDecoration.copyWith(
-                  labelText: 'اسم الشركة',
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Center(child: Text('إضافة الشركة المنفذة', style: TextStyle(color: Colors.white))),
+          backgroundColor: const Color(0xff00408b),
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                TextFormField(
                   
-                  hintText: 'أدخل اسم الشركة',
-                  alignLabelWithHint: true,
+                  controller: _nameController,
+                  decoration: customInputDecoration.copyWith(
+                    labelText: 'اسم الشركة',
+                    
+                    hintText: 'أدخل اسم الشركة',
+                    alignLabelWithHint: true,
+                  ),
+                  validator: (val) => val == null || val.isEmpty ? 'يرجى إدخال اسم الشركة' : null,
+                  textAlign: TextAlign.right,
                 ),
-                validator: (val) => val == null || val.isEmpty ? 'يرجى إدخال اسم الشركة' : null,
-                textAlign: TextAlign.right,
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                tileColor: Colors.grey.shade200,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                title: Text(
-                  _signDate == null
-                      ? 'اختر تاريخ توقيع العقد'
-                      : DateFormat('yyyy-MM-dd').format(_signDate!),
+                const SizedBox(height: 20),
+                ListTile(
+                  tileColor: Colors.grey.shade200,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  title: Text(
+                    _signDate == null
+                        ? 'اختر تاريخ توقيع العقد'
+                        : DateFormat('yyyy-MM-dd').format(_signDate!),
+                  ),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) {
+                      setState(() => _signDate = picked);
+                    }
+                  },
                 ),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) {
-                    setState(() => _signDate = picked);
-                  }
-                },
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: _addCompany,
-                child: const Text('إضافة', style: TextStyle(color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xff00408b),
-                  minimumSize: const Size(400, 50),
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: _addCompany,
+                  child: const Text('إضافة', style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff00408b),
+                    minimumSize: const Size(400, 50),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

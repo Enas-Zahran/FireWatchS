@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// import your emergency report pages as needed
+import 'package:FireWatch/technician/General/firehydrantsReport.dart';
+import 'package:FireWatch/technician/General/hosereelReport.dart';
 
 class TechnicianEmergencyLocationsPage extends StatefulWidget {
   const TechnicianEmergencyLocationsPage({super.key});
@@ -78,9 +79,25 @@ class _TechnicianEmergencyLocationsPageState extends State<TechnicianEmergencyLo
       // Navigator.push(context, MaterialPageRoute(builder: (_) => FireExtinguisherEmergencyReportPage(taskId: taskId, toolName: toolName)));
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to Fire Extinguisher Emergency Report')));
     } else if (type == 'fire hydrant') {
+            Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                  FireHydrantReportPage(taskId: taskId, toolName: toolName),
+        ),
+      );
       // Navigator.push(context, MaterialPageRoute(builder: (_) => FireHydrantEmergencyReportPage(taskId: taskId, toolName: toolName)));
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to Fire Hydrant Emergency Report')));
     } else if (type == 'hose reel') {
+        Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                 HoseReelReportPage(taskId: taskId, toolName: toolName),
+        ),
+      );
       // Navigator.push(context, MaterialPageRoute(builder: (_) => HoseReelEmergencyReportPage(taskId: taskId, toolName: toolName)));
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to Hose Reel Emergency Report')));
     } else {

@@ -80,29 +80,32 @@ class MyApp extends StatelessWidget {
     final textTheme = createTextTheme(context, "Markazi Text", "Markazi Text");
     final theme = MaterialTheme(textTheme);
 
-    return MaterialApp(
-      navigatorKey: navigatorKey,
-      debugShowCheckedModeBanner: false,
-      title: 'FireWatch',
-      theme: brightness == Brightness.light ? theme.light() : theme.dark(),
-      initialRoute: StartPage.startpageRoute,
-      routes: {
-        //start
-        StartPage.startpageRoute: (context) => const StartPage(),
-        SignUpPage.signupRoute: (context) => SignUpPage(),
-        SignInPage.signinRoute: (context) => SignInPage(),
-        // ResetPasswordRequestPage.routeName: (context) => ResetPasswordRequestPage(),
-        // ChangePasswordPage.routeName: (context) => ChangePasswordPage(),
-        //technician
-        TechnicianDashboardPage.routeName:
-            (context) => TechnicianDashboardPage(),
-        //manager
-        ManagerDashboard.managerDashboardRoute: (context) => ManagerDashboard(),
-        //head
-        Headdashboard.headdashboardRoute: (context) => Headdashboard(),
-        //All
-        AddEmergencyPage.addEmergencyRoute: (context) => AddEmergencyPage(),
-      },
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: MaterialApp(
+        navigatorKey: navigatorKey,
+        debugShowCheckedModeBanner: false,
+        title: 'FireWatch',
+        theme: brightness == Brightness.light ? theme.light() : theme.dark(),
+        initialRoute: StartPage.startpageRoute,
+        routes: {
+          //start
+          StartPage.startpageRoute: (context) => const StartPage(),
+          SignUpPage.signupRoute: (context) => SignUpPage(),
+          SignInPage.signinRoute: (context) => SignInPage(),
+          // ResetPasswordRequestPage.routeName: (context) => ResetPasswordRequestPage(),
+          // ChangePasswordPage.routeName: (context) => ChangePasswordPage(),
+          //technician
+          TechnicianDashboardPage.routeName:
+              (context) => TechnicianDashboardPage(),
+          //manager
+          ManagerDashboard.managerDashboardRoute: (context) => ManagerDashboard(),
+          //head
+          Headdashboard.headdashboardRoute: (context) => Headdashboard(),
+          //All
+          AddEmergencyPage.addEmergencyRoute: (context) => AddEmergencyPage(),
+        },
+      ),
     );
   }
 }

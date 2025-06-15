@@ -1,19 +1,21 @@
+// Page: Hose Reel Periodic Inspection Report Page
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:signature/signature.dart';
 import 'package:intl/intl.dart';
 
-class FireExtinguisherReportPage extends StatefulWidget {
+class HoseReelReportPage extends StatefulWidget {
   final String taskId;
   final String toolName;
 
-  const FireExtinguisherReportPage({super.key, required this.taskId, required this.toolName});
+  const HoseReelReportPage({super.key, required this.taskId, required this.toolName});
 
   @override
-  State<FireExtinguisherReportPage> createState() => _FireExtinguisherReportPageState();
+  State<HoseReelReportPage> createState() => _HoseReelReportPageState();
 }
 
-class _FireExtinguisherReportPageState extends State<FireExtinguisherReportPage> {
+class _HoseReelReportPageState extends State<HoseReelReportPage> {
   final supabase = Supabase.instance.client;
   DateTime? currentDate;
   DateTime? nextDate;
@@ -27,15 +29,14 @@ class _FireExtinguisherReportPageState extends State<FireExtinguisherReportPage>
   String? technicianName;
 
   final List<String> steps = [
-    'الطلاء لجسم الطفاية',
-    'خلو الجسم من الصدأ',
-    'صحة الكرت الموجود على جسم الطفاية',
-    'تفقد خرطوم الطفاية',
-    'تفقد مقبض الطفاية',
-    'تفقد ساعة الضغط',
-    'تفقد قاذف الطفاية',
-    'تفقد مسمار الأمان',
-    'وزن الطفاية'
+    'الفحص الأولي لجميع الأجزاء من التأكل والصداء.',
+    ' التحقق من وصول المياه وضغطها. ',
+    'فحص الخرطوم وفوهة القاذف . ',
+    'اختبار آلية البكرة. ',
+    'اختبار الانسدادات وتدفق المياه. ',
+    'تفقد تزييت الأجزاء المتحركة. ',
+    
+    'التحقق من اللافتات والملصقات.'
   ];
 
   @override
@@ -57,17 +58,10 @@ class _FireExtinguisherReportPageState extends State<FireExtinguisherReportPage>
     }
   }
 
-Future<void> _fetchCompany() async {
-  final currentYear = DateTime.now().year;
-    final data = await supabase
-      .from('contract_companies')
-      .select('company_name')
-      .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
-      .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
-      .maybeSingle();
-
-  setState(() => companyName = data?['company_name']);
-}
+  Future<void> _fetchCompany() async {
+    final data = await supabase.from('companies').select('name').limit(1).maybeSingle();
+    setState(() => companyName = data?['name']);
+  }
 
   void _pickDate() async {
     final now = DateTime.now();
@@ -91,7 +85,7 @@ Future<void> _fetchCompany() async {
       return;
     }
 
-    await supabase.from('fire_extinguisher_reports').insert({
+    await supabase.from('hose_reel_reports').insert({
       'task_id': widget.taskId,
       'tool_name': widget.toolName,
       'inspection_date': currentDate!.toIso8601String(),
@@ -127,35 +121,34 @@ Future<void> _fetchCompany() async {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('تقرير فحص طفاية حريق', style: TextStyle(color: Colors.white)),
+          title: const Text('تقرير فحص خرطوم الحريق', style: TextStyle(color: Colors.white)),
           centerTitle: true,
           backgroundColor: const Color(0xff00408b),
           leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('تأكيد الخروج'),
-          content: const Text('هل أنت متأكد من رغبتك في مغادرة التقرير؟'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context), // يغلق الحوار فقط
-              child: const Text('لا'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // يغلق الحوار
-                Navigator.pop(context); // يرجع للخلف
-              },
-              child: const Text('نعم'),
-            ),
-          ],
-        ),
-      );
-        },
-      ),
-      
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('تأكيد الخروج'),
+                  content: const Text('هل أنت متأكد من رغبتك في مغادرة التقرير؟'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('لا'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.pop(context);
+                      },
+                      child: const Text('نعم'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),

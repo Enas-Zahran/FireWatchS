@@ -7,40 +7,43 @@ class ReportsDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xff00408b),
-        title: const Center(
-          child: Text('لوحة التقارير', style: TextStyle(color: Colors.white)),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(30, 70, 30, 30),
-        children: [
-          _buildTile(
-            context,
-            title: 'الأعمال',
-            icon: Icons.assignment_turned_in,
-            onTap: () {
-              // TODO: Navigate to الأعمال reports page
-              // Navigator.push(context, MaterialPageRoute(builder: (_) => YourWorkReportsPage()));
-            },
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color(0xff00408b),
+          title: const Center(
+            child: Text('لوحة التقارير', style: TextStyle(color: Colors.white)),
           ),
-          const SizedBox(height: 12),
-          _buildTile(
-            context,
-            title: 'المالية',
-            icon: Icons.attach_money,
-            onTap: () {
-              // TODO: Navigate to المالية reports page
-              // Navigator.push(context, MaterialPageRoute(builder: (_) => YourFinancialReportsPage()));
-            },
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
           ),
-        ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(30, 70, 30, 30),
+          children: [
+            _buildTile(
+              context,
+              title: 'الأعمال',
+              icon: Icons.assignment_turned_in,
+              onTap: () {
+                // TODO: Navigate to الأعمال reports page
+                // Navigator.push(context, MaterialPageRoute(builder: (_) => YourWorkReportsPage()));
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildTile(
+              context,
+              title: 'المالية',
+              icon: Icons.attach_money,
+              onTap: () {
+                // TODO: Navigate to المالية reports page
+                // Navigator.push(context, MaterialPageRoute(builder: (_) => YourFinancialReportsPage()));
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

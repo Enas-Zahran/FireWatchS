@@ -83,84 +83,87 @@ class _PendingEmergencyRequestsPageState extends State<PendingEmergencyRequestsP
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Center(
-          child: Text('الطلبات المعلقة', style: TextStyle(color: Colors.white)),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Center(
+            child: Text('الطلبات المعلقة', style: TextStyle(color: Colors.white)),
+          ),
+          backgroundColor: const Color(0xff00408b),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
-        backgroundColor: const Color(0xff00408b),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : requests.isEmpty
-                ? const Center(child: Text('لا توجد طلبات حالياً'))
-                : ListView.builder(
-                    padding: const EdgeInsets.all(20),
-                    itemCount: requests.length,
-                    itemBuilder: (context, index) {
-                      final req = requests[index];
-                      final isTaree = req['task_type'] == 'طارئ';
-
-                      return Center(
-                        child: Container(
-                          width: 400,
-                          margin: const EdgeInsets.only(bottom: 20),
-                          child: Card(
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    req['task_type'] ?? 'غير محدد',
-                                    style: TextStyle(
-                                      color: req['task_type'] == 'طارئ' ? Colors.red : Colors.orange,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+        body: Directionality(
+          textDirection: TextDirection.rtl,
+          child: isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : requests.isEmpty
+                  ? const Center(child: Text('لا توجد طلبات حالياً'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(20),
+                      itemCount: requests.length,
+                      itemBuilder: (context, index) {
+                        final req = requests[index];
+                        final isTaree = req['task_type'] == 'طارئ';
+      
+                        return Center(
+                          child: Container(
+                            width: 400,
+                            margin: const EdgeInsets.only(bottom: 20),
+                            child: Card(
+                              elevation: 4,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      req['task_type'] ?? 'غير محدد',
+                                      style: TextStyle(
+                                        color: req['task_type'] == 'طارئ' ? Colors.red : Colors.orange,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _info('اسم الفني', req['users']?['name']),
-                                  _info('اسم الأداة', req['tool_code']),
-                                  if (isTaree && req['covered_area'] != '-')
-                                    _info('المساحة التي تمت تغطيتها', req['covered_area']),
-                                  _info('سبب الاستخدام / الخلل', req['usage_reason']),
-                                  _info('الإجراء المتخذ', req['action_taken']),
-                                  const SizedBox(height: 16),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    children: [
-                                      ElevatedButton(
-                                        onPressed: () => _approveRequest(req['id']),
-                                        child: const Text('موافقة'),
-                                      ),
-                                      OutlinedButton(
-                                        style: OutlinedButton.styleFrom(
-                                          foregroundColor: Colors.red,
+                                    const SizedBox(height: 8),
+                                    _info('اسم الفني', req['users']?['name']),
+                                    _info('اسم الأداة', req['tool_code']),
+                                    if (isTaree && req['covered_area'] != '-')
+                                      _info('المساحة التي تمت تغطيتها', req['covered_area']),
+                                    _info('سبب الاستخدام / الخلل', req['usage_reason']),
+                                    _info('الإجراء المتخذ', req['action_taken']),
+                                    const SizedBox(height: 16),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        ElevatedButton(
+                                          onPressed: () => _approveRequest(req['id']),
+                                          child: const Text('موافقة'),
                                         ),
-                                        onPressed: () => _showDeleteDialog(req['id']),
-                                        child: const Text('رفض'),
-                                      ),
-                                    ],
-                                  )
-                                ],
+                                        OutlinedButton(
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: Colors.red,
+                                          ),
+                                          onPressed: () => _showDeleteDialog(req['id']),
+                                          child: const Text('رفض'),
+                                        ),
+                                      ],
+                                    )
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
+        ),
       ),
     );
   }

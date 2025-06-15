@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:FireWatch/technician/General/firehydrantsReport.dart';
+import 'package:FireWatch/technician/General/hosereelReport.dart';
 
 class TechnicianCorrectiveLocationsPage extends StatefulWidget {
   const TechnicianCorrectiveLocationsPage({super.key});
 
   @override
-  State<TechnicianCorrectiveLocationsPage> createState() => _TechnicianCorrectiveLocationsPageState();
+  State<TechnicianCorrectiveLocationsPage> createState() =>
+      _TechnicianCorrectiveLocationsPageState();
 }
 
-class _TechnicianCorrectiveLocationsPageState extends State<TechnicianCorrectiveLocationsPage> {
+class _TechnicianCorrectiveLocationsPageState
+    extends State<TechnicianCorrectiveLocationsPage> {
   bool _loading = true;
   List<Map<String, dynamic>> locations = [];
   List<Map<String, dynamic>> assignedTasks = [];
@@ -32,7 +36,9 @@ class _TechnicianCorrectiveLocationsPageState extends State<TechnicianCorrective
     }
 
     // 1. Fetch locations
-    final locs = await Supabase.instance.client.from('locations').select('id, name, code');
+    final locs = await Supabase.instance.client
+        .from('locations')
+        .select('id, name, code');
     // 2. Fetch corrective_tasks assigned to this technician, joined with tool info (include type)
     final tasksResult = await Supabase.instance.client
         .from('corrective_tasks')
@@ -48,7 +54,6 @@ class _TechnicianCorrectiveLocationsPageState extends State<TechnicianCorrective
           'tool_id': t['tool_id'],
           'tool_name': t['safety_tools']['name'],
           'tool_type': t['safety_tools']['type'],
-          
         });
       }
     }
@@ -75,13 +80,43 @@ class _TechnicianCorrectiveLocationsPageState extends State<TechnicianCorrective
 
     // Use your own navigation!
     if (type == 'fire extinguisher') {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to Fire Extinguisher Corrective Report')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Navigate to Fire Extinguisher Corrective Report'),
+        ),
+      );
     } else if (type == 'fire hydrant') {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to Fire Hydrant Corrective Report')));
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                  FireHydrantReportPage(taskId: taskId, toolName: toolName),
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Navigate to Fire Hydrant Corrective Report'),
+        ),
+      );
     } else if (type == 'hose reel') {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to Hose Reel Corrective Report')));
+       Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                 HoseReelReportPage(taskId: taskId, toolName: toolName),
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Navigate to Hose Reel Corrective Report'),
+        ),
+      );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('نوع الأداة غير معروف: $type')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('نوع الأداة غير معروف: $type')));
     }
   }
 
@@ -91,48 +126,64 @@ class _TechnicianCorrectiveLocationsPageState extends State<TechnicianCorrective
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('المواقع - المهام العلاجية', style: TextStyle(color: Colors.white)),
+          title: const Text(
+            'المواقع - المهام العلاجية',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: const Color(0xff00408b),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
-                itemCount: locations.length,
-                itemBuilder: (context, index) {
-                  final loc = locations[index];
-                  final code = loc['code'] ?? '';
-                  final name = loc['name'] ?? '';
-                  final tasksInPlace = _tasksForPlace(code);
+        body:
+            _loading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 30,
+                  ),
+                  itemCount: locations.length,
+                  itemBuilder: (context, index) {
+                    final loc = locations[index];
+                    final code = loc['code'] ?? '';
+                    final name = loc['name'] ?? '';
+                    final tasksInPlace = _tasksForPlace(code);
 
-                  return Card(
-                    elevation: 3,
-                    margin: const EdgeInsets.only(bottom: 18),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    child: ExpansionTile(
-                      title: Text('$name ($code)', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      children: tasksInPlace.isEmpty
-                          ? [
-                              const Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: Text('لا يوجد مهام مسندة لهذا المكان'),
-                              )
-                            ]
-                          : tasksInPlace.map((task) {
-                              return ListTile(
-                                title: Text(task['tool_name'] ?? ''),
-                                subtitle: Text(task['tool_type'] ?? ''),
-                                onTap: () => _navigateToReport(context, task),
-                              );
-                            }).toList(),
-                    ),
-                  );
-                },
-              ),
+                    return Card(
+                      elevation: 3,
+                      margin: const EdgeInsets.only(bottom: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: ExpansionTile(
+                        title: Text(
+                          '$name ($code)',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        children:
+                            tasksInPlace.isEmpty
+                                ? [
+                                  const Padding(
+                                    padding: EdgeInsets.all(16.0),
+                                    child: Text(
+                                      'لا يوجد مهام مسندة لهذا المكان',
+                                    ),
+                                  ),
+                                ]
+                                : tasksInPlace.map((task) {
+                                  return ListTile(
+                                    title: Text(task['tool_name'] ?? ''),
+                                    subtitle: Text(task['tool_type'] ?? ''),
+                                    onTap:
+                                        () => _navigateToReport(context, task),
+                                  );
+                                }).toList(),
+                      ),
+                    );
+                  },
+                ),
       ),
     );
   }

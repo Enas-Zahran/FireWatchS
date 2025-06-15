@@ -39,6 +39,12 @@ class _ToolReportsPageState extends State<ToolReportsPage> {
         appBar: AppBar(
           title: const Text('تقارير الأداة'),
           backgroundColor: const Color(0xff00408b),
+            leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
         ),
         body: loading
             ? const Center(child: CircularProgressIndicator())

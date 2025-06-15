@@ -6,6 +6,7 @@ import 'package:FireWatch/manager/managerTasks/periodicManager.dart';
 import 'package:FireWatch/manager/managerTasks/correctiveManager.dart';
 import 'package:FireWatch/manager/managerTasks/emergencyManager.dart';
 import 'package:FireWatch/manager/managerTasks/notificationsManager.dart';
+
 class TasksMainPage extends StatelessWidget {
   static const String routeName = 'tasksMainPage';
 
@@ -51,70 +52,72 @@ class TasksMainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xff00408b),
-        title: const Center(
-          child: Text('لوحة المهام', style: TextStyle(color: Colors.white)),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color(0xff00408b),
+          title: const Center(
+            child: Text('لوحة المهام', style: TextStyle(color: Colors.white)),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.check, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PendingEmergencyRequestsPage(),
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.add, color: Colors.white),
+              onPressed: () => _showAddOptions(context),
+            ),
+            IconButton(
+              icon: const Icon(Icons.notifications, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationsPage(),
+                  ),
+                );
+              },
+            ),
+          ],
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.check, color: Colors.white),
-            onPressed: () {
-              //PendingEmergencyRequestsPage
- Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PendingEmergencyRequestsPage(),
-                    ),
-                  );            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.add, color: Colors.white),
-            onPressed: () => _showAddOptions(context),
-          ),
-          IconButton(
-  icon: const Icon(Icons.notifications, color: Colors.white),
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const NotificationsPage(),
-      ),
-    );
-  },
-),
-        ],
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(30, 50, 30, 30),
+          children: [
+            _buildTile(
+              context,
+              title: 'دوري',
+              icon: Icons.access_time,
+              destinationPage: const PeriodicTasksPage(),
+            ),
+            const SizedBox(height: 12),
+            _buildTile(
+              context,
+              title: 'علاجي',
+              icon: Icons.healing,
+              destinationPage: CorrectiveTasksPage(),
+            ),
+            const SizedBox(height: 12),
+            _buildTile(
+              context,
+              title: 'طارئ',
+              icon: Icons.report,
+              destinationPage: EmergencyTasksPage(),
+            ),
+          ],
         ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(30, 50, 30, 30),
-        children: [
-          _buildTile(
-            context,
-            title: 'دوري',
-            icon: Icons.access_time,
-             destinationPage: const PeriodicTasksPage(),
-            
-          ),
-          const SizedBox(height: 12),
-          _buildTile(
-            context,
-            title: 'علاجي',
-            icon: Icons.healing,
-           destinationPage:  CorrectiveTasksPage(),
-          ),
-          const SizedBox(height: 12),
-          _buildTile(
-            context,
-            title: 'طارئ',
-            icon: Icons.report,
-           destinationPage:  EmergencyTasksPage(),
-          ),
-        ],
       ),
     );
   }
@@ -130,12 +133,12 @@ class TasksMainPage extends StatelessWidget {
       elevation: 4,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-    onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => destinationPage),
-        );
-      },
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => destinationPage),
+          );
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(

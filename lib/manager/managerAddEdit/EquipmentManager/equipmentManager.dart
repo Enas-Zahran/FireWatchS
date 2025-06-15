@@ -6,7 +6,8 @@ import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/toolDetails.da
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/addSafteyTool.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/editSafteyTool.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/Permessions/exportRequests.dart';
-//Todo السعر لازم يتغير تلقائي حسب النوع 
+
+//Todo السعر لازم يتغير تلقائي حسب النوع
 class AllToolsPage extends StatefulWidget {
   static const String routeName = '/all-tools';
 
@@ -63,187 +64,195 @@ class _AllToolsPageState extends State<AllToolsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Center(
-          child: const Text(
-            'عرض جميع المعدات',
-            style: TextStyle(color: Colors.white),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Center(
+            child: const Text(
+              'عرض جميع المعدات',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
-        ),
-        backgroundColor: const Color(0xff00408b),
-        iconTheme: const IconThemeData(color: Colors.white),
-        automaticallyImplyLeading: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+          backgroundColor: const Color(0xff00408b),
+          iconTheme: const IconThemeData(color: Colors.white),
+          automaticallyImplyLeading: true,
 
-        actions: [
-          IconButton(icon: const Icon(Icons.add), onPressed: _goToAddTool),
-           IconButton(
-      icon: const Icon(Icons.check, color: Colors.white),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ExportRequestsPage(), 
-          ),);}
-        )
-        ],
-      ),
-      body:
-          loading
-              ? const Center(child: CircularProgressIndicator())
-              : Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _searchController,
-                      onChanged: (_) => setState(() => _applySearch()),
-                      decoration: customInputDecoration.copyWith(
-                        labelText: 'ابحث باسم الاداة',
-                        prefixIcon: const Icon(Icons.search),
+          actions: [
+            IconButton(icon: const Icon(Icons.add), onPressed: _goToAddTool),
+            IconButton(
+              icon: const Icon(Icons.check, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ExportRequestsPage()),
+                );
+              },
+            ),
+          ],
+        ),
+        body:
+            loading
+                ? const Center(child: CircularProgressIndicator())
+                : Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _searchController,
+                        onChanged: (_) => setState(() => _applySearch()),
+                        decoration: customInputDecoration.copyWith(
+                          labelText: 'ابحث باسم الاداة',
+                          prefixIcon: const Icon(Icons.search),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child:
-                          filteredTools.isEmpty
-                              ? const Center(child: Text('لا يوجد معدات'))
-                              : ListView.builder(
-                                itemCount: filteredTools.length,
-                                itemBuilder: (context, index) {
-                                  final tool = filteredTools[index];
-                                  return Card(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    margin: const EdgeInsets.symmetric(
-                                      vertical: 8,
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(12),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          ListTile(
-                                            contentPadding: EdgeInsets.zero,
-                                            title: Text(tool['name'] ?? ''),
-                                            subtitle: Text(
-                                              '${tool['type']} - ${tool['capacity']}',
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child:
+                            filteredTools.isEmpty
+                                ? const Center(child: Text('لا يوجد معدات'))
+                                : ListView.builder(
+                                  itemCount: filteredTools.length,
+                                  itemBuilder: (context, index) {
+                                    final tool = filteredTools[index];
+                                    return Card(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      margin: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            ListTile(
+                                              contentPadding: EdgeInsets.zero,
+                                              title: Text(tool['name'] ?? ''),
+                                              subtitle: Text(
+                                                '${tool['type']} - ${tool['capacity']}',
+                                              ),
+                                              trailing: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.end,
+                                                children: [
+                                                  Text(
+                                                    'آخر صيانة: ${tool['last_maintenance_date'] ?? 'غير محدد'}',
+                                                  ),
+                                                  Text(
+                                                    'القادمة: ${tool['next_maintenance_date'] ?? 'غير محدد'}',
+                                                  ),
+                                                ],
+                                              ),
+                                              onTap: () => _goToDetails(tool),
                                             ),
-                                            trailing: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.end,
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.end,
                                               children: [
-                                                Text(
-                                                  'آخر صيانة: ${tool['last_maintenance_date'] ?? 'غير محدد'}',
+                                                IconButton(
+                                                  onPressed: () async {
+                                                    final result =
+                                                        await Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder:
+                                                                (_) =>
+                                                                    EditSafetyToolPage(
+                                                                      tool:
+                                                                          tool,
+                                                                    ),
+                                                          ),
+                                                        );
+
+                                                    if (result == true)
+                                                      await _fetchTools();
+                                                  },
+
+                                                  icon: const Icon(
+                                                    Icons.edit,
+                                                    color: Colors.blue,
+                                                  ),
                                                 ),
-                                                Text(
-                                                  'القادمة: ${tool['next_maintenance_date'] ?? 'غير محدد'}',
+                                                IconButton(
+                                                  onPressed: () async {
+                                                    final confirm = await showDialog<
+                                                      bool
+                                                    >(
+                                                      context: context,
+                                                      builder:
+                                                          (
+                                                            context,
+                                                          ) => AlertDialog(
+                                                            title: const Text(
+                                                              'تأكيد الحذف',
+                                                            ),
+                                                            content: Text(
+                                                              'هل أنت متأكد من حذف الأداة "${tool['name']}"؟',
+                                                            ),
+                                                            actions: [
+                                                              TextButton(
+                                                                onPressed:
+                                                                    () => Navigator.pop(
+                                                                      context,
+                                                                      false,
+                                                                    ),
+                                                                child:
+                                                                    const Text(
+                                                                      'إلغاء',
+                                                                    ),
+                                                              ),
+                                                              TextButton(
+                                                                onPressed:
+                                                                    () => Navigator.pop(
+                                                                      context,
+                                                                      true,
+                                                                    ),
+                                                                child:
+                                                                    const Text(
+                                                                      'نعم',
+                                                                    ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                    );
+                                                    if (confirm == true) {
+                                                      await Supabase
+                                                          .instance
+                                                          .client
+                                                          .from('safety_tools')
+                                                          .delete()
+                                                          .eq('id', tool['id']);
+                                                      await _fetchTools();
+                                                    }
+                                                  },
+                                                  icon: const Icon(
+                                                    Icons.delete,
+                                                    color: Colors.red,
+                                                  ),
                                                 ),
                                               ],
                                             ),
-                                            onTap: () => _goToDetails(tool),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.end,
-                                            children: [
-                                              IconButton(
-                                                onPressed: () async {
-                                                  final result =
-                                                      await Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                          builder:
-                                                              (_) =>
-                                                                  EditSafetyToolPage(
-                                                                    tool: tool,
-                                                                  ),
-
-                                                        ),
-                                                        
-                                                      );
-
-                                                  if (result == true)
-                                                    await _fetchTools(); 
-                                                },
-
-                                                icon: const Icon(
-                                                  Icons.edit,
-                                                  color: Colors.blue,
-                                                ),
-                                              ),
-                                              IconButton(
-                                                onPressed: () async {
-                                                  final confirm = await showDialog<
-                                                    bool
-                                                  >(
-                                                    context: context,
-                                                    builder:
-                                                        (
-                                                          context,
-                                                        ) => AlertDialog(
-                                                          title: const Text(
-                                                            'تأكيد الحذف',
-                                                          ),
-                                                          content: Text(
-                                                            'هل أنت متأكد من حذف الأداة "${tool['name']}"؟',
-                                                          ),
-                                                          actions: [
-                                                            TextButton(
-                                                              onPressed:
-                                                                  () =>
-                                                                      Navigator.pop(
-                                                                        context,
-                                                                        false,
-                                                                      ),
-                                                              child: const Text(
-                                                                'إلغاء',
-                                                              ),
-                                                            ),
-                                                            TextButton(
-                                                              onPressed:
-                                                                  () =>
-                                                                      Navigator.pop(
-                                                                        context,
-                                                                        true,
-                                                                      ),
-                                                              child: const Text(
-                                                                'نعم',
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                  );
-                                                  if (confirm == true) {
-                                                    await Supabase
-                                                        .instance
-                                                        .client
-                                                        .from('safety_tools')
-                                                        .delete()
-                                                        .eq('id', tool['id']);
-                                                    await _fetchTools();
-                                                  }
-                                                },
-                                                icon: const Icon(
-                                                  Icons.delete,
-                                                  color: Colors.red,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                },
-                              ),
-                    ),
-                  ],
+                                    );
+                                  },
+                                ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+      ),
     );
   }
 }

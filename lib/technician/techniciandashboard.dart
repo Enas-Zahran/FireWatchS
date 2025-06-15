@@ -50,84 +50,87 @@ class TechnicianDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xff00408b),
-        title: const Center(
-          child: Text('لوحة مهام   ', style: TextStyle(color: Colors.white)),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color(0xff00408b),
+          title: const Center(
+            child: Text('لوحة مهام   ', style: TextStyle(color: Colors.white)),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.add, color: Colors.white),
+              onPressed: () => _showAddOptions(context),
+            ),
+           IconButton(
+        icon: const Icon(Icons.notifications, color: Colors.white),
+        onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const TechnicianNotificationsPage(),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: Colors.white),
-            onPressed: () => _showAddOptions(context),
-          ),
-         IconButton(
-  icon: const Icon(Icons.notifications, color: Colors.white),
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const TechnicianNotificationsPage(),
+      );
+        },
       ),
-    );
-  },
-),
-
-        ],
-     leading: IconButton(
-  icon: const Icon(Icons.arrow_back, color: Colors.white),
-  onPressed: () {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('تأكيد تسجيل الخروج'),
-        content: const Text('سيتم تسجيل خروجك من الحساب. هل أنت متأكد؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('لا'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await Supabase.instance.client.auth.signOut();
-              if (context.mounted) {
-                Navigator.pop(context); // Close dialog
-                Navigator.pop(context); // Go back (or navigate to login)
-              }
-            },
-            child: const Text('نعم'),
-          ),
-        ],
+      
+          ],
+       leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('تأكيد تسجيل الخروج'),
+          content: const Text('سيتم تسجيل خروجك من الحساب. هل أنت متأكد؟'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('لا'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await Supabase.instance.client.auth.signOut();
+                if (context.mounted) {
+                  Navigator.pop(context); // Close dialog
+                  Navigator.pop(context); // Go back (or navigate to login)
+                }
+              },
+              child: const Text('نعم'),
+            ),
+          ],
+        ),
+      );
+        },
       ),
-    );
-  },
-),
-
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(30, 50, 30, 30),
-        children: [
-          _buildTile(
-            context,
-            title: 'دوري',
-            icon: Icons.access_time,
-            destinationPage: const TechnicianPeriodicLocationsPage(),
-          ),
-          const SizedBox(height: 12),
-          _buildTile(
-            context,
-            title: 'علاجي',
-            icon: Icons.healing,
-            destinationPage: const TechnicianCorrectiveLocationsPage(),
-          ),
-          const SizedBox(height: 12),
-          _buildTile(
-            context,
-            title: 'طارئ',
-            icon: Icons.report,
-            destinationPage: const TechnicianEmergencyLocationsPage(),
-          ),
-        ],
+      
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(30, 50, 30, 30),
+          children: [
+            _buildTile(
+              context,
+              title: 'دوري',
+              icon: Icons.access_time,
+              destinationPage: const TechnicianPeriodicLocationsPage(),
+            ),
+            const SizedBox(height: 12),
+            _buildTile(
+              context,
+              title: 'علاجي',
+              icon: Icons.healing,
+              destinationPage: const TechnicianCorrectiveLocationsPage(),
+            ),
+            const SizedBox(height: 12),
+            _buildTile(
+              context,
+              title: 'طارئ',
+              icon: Icons.report,
+              destinationPage: const TechnicianEmergencyLocationsPage(),
+            ),
+          ],
+        ),
       ),
     );
   }

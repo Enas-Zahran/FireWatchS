@@ -1,9 +1,7 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:FireWatch/manager/missions/add_edit_page.dart';
 import 'package:FireWatch/manager/missions/reports_page.dart';
-import 'package:FireWatch/manager/missions/tasks_page.dart'; 
+import 'package:FireWatch/manager/missions/tasks_page.dart';
 
 class ManagerDashboard extends StatelessWidget {
   static const String managerDashboardRoute = 'managerdashboard';
@@ -12,73 +10,79 @@ class ManagerDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xff00408b),
-        title: const Center(
-          child: Text(
-            'لوحة تحكم مدير دائرة السلامة',
-            style: TextStyle(color: Colors.white),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color(0xff00408b),
+          title: const Center(
+            child: Text(
+              'لوحة تحكم مدير دائرة السلامة',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: AlertDialog(
+                      title: const Text('تأكيد'),
+                      content: const Text(
+                        'هل أنت متأكد من الرجوع لصفحة الدخول؟',
+                      ),
+                      actions: <Widget>[
+                        TextButton(
+                          child: const Text('إلغاء'),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                        TextButton(
+                          child: const Text('نعم'),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            Navigator.of(
+                              context,
+                            ).popUntil((route) => route.isFirst);
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: AlertDialog(
-                    title: const Text('تأكيد'),
-                    content: const Text('هل أنت متأكد من الرجوع لصفحة الدخول؟'),
-                    actions: <Widget>[
-                      TextButton(
-                        child: const Text('إلغاء'),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      TextButton(
-                        child: const Text('نعم'),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          Navigator.of(context).popUntil((route) => route.isFirst);
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(30, 50, 30, 50),
+          children: [
+            _buildTile(
+              context,
+              title: 'المهام',
+              icon: Icons.task_alt,
+              destination: const TasksMainPage(),
+            ),
+            const SizedBox(height: 12),
+            _buildTile(
+              context,
+              title: 'إضافة وتعديل',
+              icon: Icons.edit,
+              destination: const AddEditPage(),
+            ),
+            const SizedBox(height: 12),
+            _buildTile(
+              context,
+              title: 'التقارير',
+              icon: Icons.insert_chart,
+              destination: const ReportsDashboardPage(),
+            ),
+          ],
         ),
-
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(30, 50, 30, 30),
-        children: [
-          _buildTile(
-            context,
-            title: 'المهام',
-            icon: Icons.task_alt,
-            destination: const TasksMainPage(),
-          ),
-          const SizedBox(height: 12),
-          _buildTile(
-            context,
-            title: 'إضافة وتعديل',
-            icon: Icons.edit,
-            destination: const AddEditPage(),
-          ),
-          const SizedBox(height: 12),
-          _buildTile(
-            context,
-            title: 'التقارير',
-            icon: Icons.insert_chart,
-            destination: const ReportsDashboardPage(),
-          ),
-        ],
       ),
     );
   }
@@ -111,10 +115,7 @@ class ManagerDashboard extends StatelessWidget {
                 color: Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(height: 8),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
             ],
           ),
         ),

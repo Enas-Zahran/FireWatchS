@@ -117,156 +117,159 @@ class _EmergencyTasksPageState extends State<EmergencyTasksPage> {
   @override
   Widget build(BuildContext context) {
     final filteredTechnicians = technicians.where((tech) {
-      return tech['name'].contains(_techSearchController.text);
+      return tech['name'].toString().toLowerCase().contains(_techSearchController.text.toLowerCase());
     }).toList();
 
     final keyword = _toolSearchController.text.trim();
     final filteredRequests = requests.where((req) {
-      return req['tool'].contains(keyword) ||
-          (req['locationName'] ?? '').startsWith(keyword);
+      return req['tool'].toString().toLowerCase().contains(keyword.toLowerCase()) ||
+          (req['locationName'] ?? '').toLowerCase().startsWith(keyword.toLowerCase());
     }).toList();
 
     final selectedRatio = filteredRequests.isEmpty
         ? '0%'
         : '${((selectedRequestIds.length / filteredRequests.length) * 100).toStringAsFixed(0)}%';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('المهام الطارئة', style: TextStyle(color: Colors.white)),
-        centerTitle: true,
-        backgroundColor: const Color(0xff00408b),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('المهام الطارئة', style: TextStyle(color: Colors.white)),
+          centerTitle: true,
+          backgroundColor: const Color(0xff00408b),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          children: [
-            Text('عدد الطلبات المحددة: ${selectedRequestIds.length} من ${filteredRequests.length} ($selectedRatio)'),
-            if (selectedTechnicianName != null)
-              Text('$selectedTechnicianName : الفني المحدد'),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            selectedRequestIds = filteredRequests.map((r) => r['id'] as String).toList();
-                          });
-                        },
-                        child: const Text('تحديد الكل'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            selectedRequestIds.clear();
-                          });
-                        },
-                        child: const Text('إلغاء التحديد الكلي'),
-                      ),
-                      TextField(
-                        controller: _toolSearchController,
-                        decoration: const InputDecoration(
-                          labelText: '🔍 اكتب أول حرف من الموقع أو اسم الأداة',
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _techSearchController,
-                    decoration: const InputDecoration(
-                      labelText: '🔍 ابحث عن اسم الفني',
-                    ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: Row(
+        body: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            children: [
+              Text('عدد الطلبات المحددة: ${selectedRequestIds.length} من ${filteredRequests.length} ($selectedRatio)'),
+              if (selectedTechnicianName != null)
+                Text('الفني المحدد : $selectedTechnicianName '),
+              const SizedBox(height: 8),
+              Row(
                 children: [
                   Expanded(
-                    child: ListView(
-                      children: filteredRequests.map((req) {
-                        final reqId = req['id'];
-                        final isSelected = selectedRequestIds.contains(reqId);
-                        final assignedTo = req['assignedTo'];
-                        final assignedToAnother = assignedTo != null && assignedTo != selectedTechnicianId;
-                        final assignedToThisTech = assignedTo != null && assignedTo == selectedTechnicianId;
-                        return ListTile(
-                          tileColor: assignedToAnother
-                              ? Colors.red[100]
-                              : assignedToThisTech
-                                  ? Colors.green[100]
-                                  : null,
-                          title: Text('${req['tool']} - ${req['locationName']}'),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('المساحة المغطاة: ${req['area']}'),
-                              Text('السبب: ${req['reason']}'),
-                              Text('الإجراء: ${req['action']}'),
-                              if (assignedToAnother)
-                                const Text('❗ تم إسناد هذا الطلب لمستخدم آخر'),
-                            ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              selectedRequestIds = filteredRequests.map((r) => r['id'] as String).toList();
+                            });
+                          },
+                          child: const Text('تحديد الكل'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              selectedRequestIds.clear();
+                            });
+                          },
+                          child: const Text('إلغاء التحديد الكلي'),
+                        ),
+                        TextField(
+                          controller: _toolSearchController,
+                          decoration: const InputDecoration(
+                            labelText: '🔍 اكتب أول حرف من الموقع أو اسم الأداة',
                           ),
-                          trailing: Checkbox(
-                            value: isSelected,
-                            onChanged: (val) {
-                              setState(() {
-                                if (isSelected) {
-                                  selectedRequestIds.remove(reqId);
-                                } else {
-                                  selectedRequestIds.add(reqId);
-                                }
-                              });
-                            },
-                          ),
-                        );
-                      }).toList(),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ListView(
-                      children: filteredTechnicians.map((tech) {
-                        return Card(
-                          color: selectedTechnicianId == tech['id'] ? Colors.blue[100] : null,
-                          child: ListTile(
-                            title: Text(tech['name']),
-                            subtitle: Text('عدد المهام: ${tech['assignedPercent']}'),
-                            onTap: () {
-                              setState(() {
-                                selectedTechnicianId = tech['id'];
-                                selectedTechnicianName = tech['name'];
-                              });
-                            },
-                          ),
-                        );
-                      }).toList(),
+                    child: TextField(
+                      controller: _techSearchController,
+                      decoration: const InputDecoration(
+                        labelText: '🔍 ابحث عن اسم الفني',
+                      ),
+                      onChanged: (_) => setState(() {}),
                     ),
                   ),
                 ],
               ),
-            ),
-            ElevatedButton(
-              onPressed: selectedTechnicianId != null && selectedRequestIds.isNotEmpty
-                  ? () => _showConfirmationDialog(context)
-                  : null,
-              child: const Text('إضافة المهام'),
-            )
-          ],
+              const SizedBox(height: 16),
+              Expanded(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ListView(
+                        children: filteredRequests.map((req) {
+                          final reqId = req['id'];
+                          final isSelected = selectedRequestIds.contains(reqId);
+                          final assignedTo = req['assignedTo'];
+                          final assignedToAnother = assignedTo != null && assignedTo != selectedTechnicianId;
+                          final assignedToThisTech = assignedTo != null && assignedTo == selectedTechnicianId;
+                          return ListTile(
+                            tileColor: assignedToAnother
+                                ? Colors.red[100]
+                                : assignedToThisTech
+                                    ? Colors.green[100]
+                                    : null,
+                            title: Text('${req['tool']} - ${req['locationName']}'),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('المساحة المغطاة: ${req['area']}'),
+                                Text('السبب: ${req['reason']}'),
+                                Text('الإجراء: ${req['action']}'),
+                                if (assignedToAnother)
+                                  const Text('❗ تم إسناد هذا الطلب لمستخدم آخر'),
+                              ],
+                            ),
+                            trailing: Checkbox(
+                              value: isSelected,
+                              onChanged: (val) {
+                                setState(() {
+                                  if (isSelected) {
+                                    selectedRequestIds.remove(reqId);
+                                  } else {
+                                    selectedRequestIds.add(reqId);
+                                  }
+                                });
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ListView(
+                        children: filteredTechnicians.map((tech) {
+                          return Card(
+                            color: selectedTechnicianId == tech['id'] ? Colors.blue[100] : null,
+                            child: ListTile(
+                              title: Text(tech['name']),
+                              subtitle: Text('عدد المهام: ${tech['assignedPercent']}'),
+                              onTap: () {
+                                setState(() {
+                                  selectedTechnicianId = tech['id'];
+                                  selectedTechnicianName = tech['name'];
+                                });
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                onPressed: selectedTechnicianId != null && selectedRequestIds.isNotEmpty
+                    ? () => _showConfirmationDialog(context)
+                    : null,
+                child: const Text('إضافة المهام'),
+              )
+            ],
+          ),
         ),
       ),
     );

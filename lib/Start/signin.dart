@@ -35,7 +35,6 @@ class _SignInPageState extends State<SignInPage> {
         final user = response.user;
 
         if (user != null) {
-          // Fetch role and approval status from 'users' table
           final profileData =
               await Supabase.instance.client
                   .from('users')
@@ -114,7 +113,12 @@ class _SignInPageState extends State<SignInPage> {
           title: Center(
             child: Text('تسجيل الدخول', style: TextStyle(color: Colors.white)),
           ),
-          iconTheme: IconThemeData(color: Colors.white),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
         ),
         body: Center(
           child: Padding(

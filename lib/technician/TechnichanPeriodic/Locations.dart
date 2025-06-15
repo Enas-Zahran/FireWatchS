@@ -1,11 +1,11 @@
-import 'package:FireWatch/technician/TechnichanPeriodic/firehydrantsPeriodic.dart';
+import 'package:FireWatch/technician/General/firehydrantsReport.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Import your report pages here
 // import 'package:FireWatch/technician/reports/FireExtinguisherReportPage.dart';
 // import 'package:FireWatch/technician/reports/FireHydrantReportPage.dart';
-// import 'package:FireWatch/technician/reports/HoseReelReportPage.dart';
+import 'package:FireWatch/technician/General/hosereelReport.dart';
 import 'package:FireWatch/technician/TechnichanPeriodic/fireextinguisherPeridoic.dart';
 
 class TechnicianPeriodicLocationsPage extends StatefulWidget {
@@ -113,6 +113,16 @@ class _TechnicianPeriodicLocationsPageState
         const SnackBar(content: Text('Navigate to Fire Hydrant Report')),
       );
     } else if (type == 'hose reel') {
+       Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => HoseReelReportPage(
+                taskId: taskId,
+                toolName: toolName,
+              ),
+        ),
+      );
       // Navigator.push(context, MaterialPageRoute(builder: (_) => HoseReelReportPage(taskId: taskId, toolName: toolName)));
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Navigate to Hose Reel Report')),

@@ -56,41 +56,44 @@ class _ExportRequestDetailsPageState extends State<ExportRequestDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xff00408b),
-        title: const Text('عرض التفاصيل', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : request == null
-              ? const Center(child: Text('لم يتم العثور على الطلب'))
-              : Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: ListView(
-                    children: [
-                      buildTile('تاريخ الطلب', formatDate(request!['created_at'])),
-                      buildTile('اسم السيد ورقم المركبة ونوعها',
-                          '${request!['vehicle_owner']} - ${request!['vehicle_number']} - ${request!['vehicle_type']}'),
-                      buildTile('المواد والإجراءات عليها', request!['materials_details']),
-                      buildTile('الأسباب', request!['reason']),
-                      buildTile('نوع المواد', request!['material_type']),
-                      buildTile('تاريخ إعادة المواد', formatDate(request!['return_date'])),
-                      buildTile('اسم الفني', request!['technician_name']),
-                      buildTile('توقيع الفني', request!['technician_signature'] ?? 'غير موقع'),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: request!['is_approved'] == true ? null : _approveRequest,
-                        child: const Text('اعتماد مدير الدائرة', style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(400, 50),
-                          backgroundColor: const Color(0xff00408b),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color(0xff00408b),
+          title: const Text('عرض التفاصيل', style: TextStyle(color: Colors.white)),
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: loading
+            ? const Center(child: CircularProgressIndicator())
+            : request == null
+                ? const Center(child: Text('لم يتم العثور على الطلب'))
+                : Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: ListView(
+                      children: [
+                        buildTile('تاريخ الطلب', formatDate(request!['created_at'])),
+                        buildTile('اسم السيد ورقم المركبة ونوعها',
+                            '${request!['vehicle_owner']} - ${request!['vehicle_number']} - ${request!['vehicle_type']}'),
+                        buildTile('المواد والإجراءات عليها', request!['materials_details']),
+                        buildTile('الأسباب', request!['reason']),
+                        buildTile('نوع المواد', request!['material_type']),
+                        buildTile('تاريخ إعادة المواد', formatDate(request!['return_date'])),
+                        buildTile('اسم الفني', request!['technician_name']),
+                        buildTile('توقيع الفني', request!['technician_signature'] ?? 'غير موقع'),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: request!['is_approved'] == true ? null : _approveRequest,
+                          child: const Text('اعتماد مدير الدائرة', style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(400, 50),
+                            backgroundColor: const Color(0xff00408b),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+      ),
     );
   }
 
