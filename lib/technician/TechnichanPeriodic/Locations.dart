@@ -1,10 +1,6 @@
 import 'package:FireWatch/technician/General/firehydrantsReport.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-// Import your report pages here
-// import 'package:FireWatch/technician/reports/FireExtinguisherReportPage.dart';
-// import 'package:FireWatch/technician/reports/FireHydrantReportPage.dart';
 import 'package:FireWatch/technician/General/hosereelReport.dart';
 import 'package:FireWatch/technician/TechnichanPeriodic/fireextinguisherPeridoic.dart';
 
@@ -12,12 +8,10 @@ class TechnicianPeriodicLocationsPage extends StatefulWidget {
   const TechnicianPeriodicLocationsPage({super.key});
 
   @override
-  State<TechnicianPeriodicLocationsPage> createState() =>
-      _TechnicianPeriodicLocationsPageState();
+  State<TechnicianPeriodicLocationsPage> createState() => _TechnicianPeriodicLocationsPageState();
 }
 
-class _TechnicianPeriodicLocationsPageState
-    extends State<TechnicianPeriodicLocationsPage> {
+class _TechnicianPeriodicLocationsPageState extends State<TechnicianPeriodicLocationsPage> {
   bool _loading = true;
   List<Map<String, dynamic>> locations = [];
   List<Map<String, dynamic>> assignedTools = [];
@@ -40,11 +34,18 @@ class _TechnicianPeriodicLocationsPageState
       return;
     }
 
-    // 1. Fetch locations
+    final userInfo = await Supabase.instance.client
+        .from('users')
+        .select('name')
+        .eq('id', id)
+        .maybeSingle();
+
+    final technicianName = userInfo?['name'] ?? 'Unknown';
+
     final locs = await Supabase.instance.client
         .from('locations')
         .select('id, name, code');
-    // 2. Fetch periodic_tasks assigned to this technician, joined with tool info (include type)
+
     final toolsResult = await Supabase.instance.client
         .from('periodic_tasks')
         .select('id, tool_id, assigned_to, safety_tools(id, name, type)')
@@ -58,6 +59,7 @@ class _TechnicianPeriodicLocationsPageState
           'tool_id': t['tool_id'],
           'tool_name': t['safety_tools']['name'],
           'tool_type': t['safety_tools']['type'],
+          'technician_name': technicianName,
         });
       }
     }
@@ -77,60 +79,56 @@ class _TechnicianPeriodicLocationsPageState
     }).toList();
   }
 
-  // Helper: navigate to appropriate report page based on type
   void _navigateToReport(BuildContext context, Map<String, dynamic> tool) {
     final type = tool['tool_type']?.toString().toLowerCase();
     final taskId = tool['task_id'];
     final toolName = tool['tool_name'];
+    final technicianName = tool['technician_name'];
 
     if (type == 'fire extinguisher') {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder:
-              (context) => FireExtinguisherReportPage(
-                taskId: taskId,
-                toolName: toolName,
-              ),
+          builder: (context) => FireExtinguisherReportPage(
+            taskId: taskId,
+            toolName: toolName,
+            technicianName: technicianName,
+          ),
         ),
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Navigate to Fire Extinguisher Report')),
       );
     } else if (type == 'fire hydrant') {
-      // Navigator.push(context, MaterialPageRoute(builder: (_) => FireHydrantReportPage(taskId: taskId, toolName: toolName)));
-       Navigator.push(
+      Navigator.push(
         context,
         MaterialPageRoute(
-          builder:
-              (context) => FireHydrantReportPage(
-                taskId: taskId,
-                toolName: toolName,
-              ),
+          builder: (context) => FireHydrantReportPage(
+            taskId: taskId,
+            toolName: toolName,
+          ),
         ),
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Navigate to Fire Hydrant Report')),
       );
     } else if (type == 'hose reel') {
-       Navigator.push(
+      Navigator.push(
         context,
         MaterialPageRoute(
-          builder:
-              (context) => HoseReelReportPage(
-                taskId: taskId,
-                toolName: toolName,
-              ),
+          builder: (context) => HoseReelReportPage(
+            taskId: taskId,
+            toolName: toolName,
+          ),
         ),
       );
-      // Navigator.push(context, MaterialPageRoute(builder: (_) => HoseReelReportPage(taskId: taskId, toolName: toolName)));
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Navigate to Hose Reel Report')),
       );
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('نوع الأداة غير معروف: $type')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('نوع الأداة غير معروف: $type')),
+      );
     }
   }
 
@@ -150,54 +148,44 @@ class _TechnicianPeriodicLocationsPageState
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        body:
-            _loading
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 30,
-                  ),
-                  itemCount: locations.length,
-                  itemBuilder: (context, index) {
-                    final loc = locations[index];
-                    final code = loc['code'] ?? '';
-                    final name = loc['name'] ?? '';
-                    final toolsInPlace = _toolsForPlace(code);
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                itemCount: locations.length,
+                itemBuilder: (context, index) {
+                  final loc = locations[index];
+                  final code = loc['code'] ?? '';
+                  final name = loc['name'] ?? '';
+                  final toolsInPlace = _toolsForPlace(code);
 
-                    return Card(
-                      elevation: 3,
-                      margin: const EdgeInsets.only(bottom: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                  return Card(
+                    elevation: 3,
+                    margin: const EdgeInsets.only(bottom: 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    child: ExpansionTile(
+                      title: Text(
+                        '$name ($code)',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      child: ExpansionTile(
-                        title: Text(
-                          '$name ($code)',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        children:
-                            toolsInPlace.isEmpty
-                                ? [
-                                  const Padding(
-                                    padding: EdgeInsets.all(16.0),
-                                    child: Text(
-                                      'لا يوجد أدوات مسندة لهذا المكان',
-                                    ),
-                                  ),
-                                ]
-                                : toolsInPlace.map((tool) {
-                                  return ListTile(
-                                    title: Text(tool['tool_name'] ?? ''),
-                                    subtitle: Text(tool['tool_type'] ?? ''),
-                                    onTap:
-                                        () => _navigateToReport(context, tool),
-                                  );
-                                }).toList(),
-                      ),
-                    );
-                  },
-                ),
+                      children: toolsInPlace.isEmpty
+                          ? [
+                              const Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Text('لا يوجد أدوات مسندة لهذا المكان'),
+                              ),
+                            ]
+                          : toolsInPlace.map((tool) {
+                              return ListTile(
+                                title: Text(tool['tool_name'] ?? ''),
+                                subtitle: Text(tool['tool_type'] ?? ''),
+                                onTap: () => _navigateToReport(context, tool),
+                              );
+                            }).toList(),
+                    ),
+                  );
+                },
+              ),
       ),
     );
   }

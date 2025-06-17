@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:FireWatch/technician/TechnichanCorrective/fireextinguisherTwo.dart';
 import 'package:FireWatch/technician/General/firehydrantsReport.dart';
 import 'package:FireWatch/technician/General/hosereelReport.dart';
 
@@ -34,9 +34,16 @@ class _TechnicianEmergencyLocationsPageState extends State<TechnicianEmergencyLo
       return;
     }
 
-    // 1. Fetch locations
+    final userInfo = await Supabase.instance.client
+        .from('users')
+        .select('name')
+        .eq('id', id)
+        .maybeSingle();
+
+    final technicianName = userInfo?['name'] ?? 'Unknown';
+
     final locs = await Supabase.instance.client.from('locations').select('id, name, code');
-    // 2. Fetch emergency_tasks assigned to this technician, joined with tool info (include type)
+
     final tasksResult = await Supabase.instance.client
         .from('emergency_tasks')
         .select('id, tool_id, assigned_to, safety_tools(id, name, type)')
@@ -74,32 +81,40 @@ class _TechnicianEmergencyLocationsPageState extends State<TechnicianEmergencyLo
     final taskId = task['task_id'];
     final toolName = task['tool_name'];
 
-    // Adjust below for your real emergency report pages
     if (type == 'fire extinguisher') {
-      // Navigator.push(context, MaterialPageRoute(builder: (_) => FireExtinguisherEmergencyReportPage(taskId: taskId, toolName: toolName)));
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to Fire Extinguisher Emergency Report')));
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => FireExtinguisherCorrectiveEmergency(
+            taskId: taskId,
+            toolName: toolName,
+            taskType: 'طارئ',
+          ),
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Navigate to Fire Extinguisher Emergency Report')),
+      );
     } else if (type == 'fire hydrant') {
-            Navigator.push(
+      Navigator.push(
         context,
         MaterialPageRoute(
-          builder:
-              (context) =>
-                  FireHydrantReportPage(taskId: taskId, toolName: toolName),
+          builder: (context) => FireHydrantReportPage(taskId: taskId, toolName: toolName),
         ),
       );
-      // Navigator.push(context, MaterialPageRoute(builder: (_) => FireHydrantEmergencyReportPage(taskId: taskId, toolName: toolName)));
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to Fire Hydrant Emergency Report')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Navigate to Fire Hydrant Emergency Report')),
+      );
     } else if (type == 'hose reel') {
-        Navigator.push(
+      Navigator.push(
         context,
         MaterialPageRoute(
-          builder:
-              (context) =>
-                 HoseReelReportPage(taskId: taskId, toolName: toolName),
+          builder: (context) => HoseReelReportPage(taskId: taskId, toolName: toolName),
         ),
       );
-      // Navigator.push(context, MaterialPageRoute(builder: (_) => HoseReelEmergencyReportPage(taskId: taskId, toolName: toolName)));
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to Hose Reel Emergency Report')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Navigate to Hose Reel Emergency Report')),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('نوع الأداة غير معروف: $type')));
     }

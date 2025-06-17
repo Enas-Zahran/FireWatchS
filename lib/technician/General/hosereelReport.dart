@@ -59,8 +59,15 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
   }
 
   Future<void> _fetchCompany() async {
-    final data = await supabase.from('companies').select('name').limit(1).maybeSingle();
-    setState(() => companyName = data?['name']);
+  final currentYear = DateTime.now().year;
+final data = await supabase
+  .from('contract_companies')
+  .select('company_name')
+  .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
+  .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
+  .maybeSingle();
+setState(() => companyName = data?['company_name']);
+
   }
 
   void _pickDate() async {

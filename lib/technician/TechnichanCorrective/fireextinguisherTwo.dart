@@ -2,18 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:signature/signature.dart';
 import 'package:intl/intl.dart';
-
-class FireHydrantReportPage extends StatefulWidget {
+import 'package:FireWatch/technician/MaterialExit.dart';
+class FireExtinguisherCorrectiveEmergency extends StatefulWidget {
   final String taskId;
   final String toolName;
+  final String taskType; // 'علاجي' أو 'طارئ'
 
-  const FireHydrantReportPage({super.key, required this.taskId, required this.toolName});
+  const FireExtinguisherCorrectiveEmergency({
+    super.key,
+    required this.taskId,
+    required this.toolName,
+    required this.taskType,
+  });
 
   @override
-  State<FireHydrantReportPage> createState() => _FireHydrantReportPageState();
+  State<FireExtinguisherCorrectiveEmergency> createState() => _FireExtinguisherCorrectiveEmergencyState();
 }
 
-class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
+class _FireExtinguisherCorrectiveEmergencyState extends State<FireExtinguisherCorrectiveEmergency> {
   final supabase = Supabase.instance.client;
   DateTime? currentDate;
   DateTime? nextDate;
@@ -27,14 +33,15 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
   String? technicianName;
 
   final List<String> steps = [
-    'تفقد الصمام الرئيسي والصمامات الفرعية .',
-    'نفقد جسم الصمام من التأكل (الصداء) .',
-    'تفقد الصمام بعدم وجود تسريبات للماء منه.',
-    'تفقد نظافة الصمام والطلاء .',
-    'التحقق من وصول الماء وضغطة .',
-    'تفقد أي عوائق قد تعيق عمل الفوهة.',
-    'التحقق من وجود أغطية متشققة أو مفقودة.',
-    'تفقد لاقط الخرطوم المغذي لسيارات الدفاع المدني'
+    'الطلاء لجسم الطفاية',
+    'خلو الجسم من الصدأ',
+    'صحة الكرت الموجود على جسم الطفاية',
+    'تفقد خرطوم الطفاية',
+    'تفقد مقبض الطفاية',
+    'تفقد ساعة الضغط',
+    'تفقد قاذف الطفاية',
+    'تفقد مسمار الأمان',
+    'وزن الطفاية'
   ];
 
   @override
@@ -58,14 +65,13 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
 
   Future<void> _fetchCompany() async {
     final currentYear = DateTime.now().year;
-final data = await supabase
-  .from('contract_companies')
-  .select('company_name')
-  .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
-  .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
-  .maybeSingle();
-setState(() => companyName = data?['company_name']);
-
+    final data = await supabase
+        .from('contract_companies')
+        .select('company_name')
+        .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
+        .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
+        .maybeSingle();
+    setState(() => companyName = data?['company_name']);
   }
 
   void _pickDate() async {
@@ -84,41 +90,65 @@ setState(() => companyName = data?['company_name']);
     }
   }
 
-  Future<void> _submitReport() async {
-    if (!_formKey.currentState!.validate() || currentDate == null || technicianSignature.isEmpty || companySignature.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')));
-      return;
-    }
-
-    await supabase.from('fire_hydrant_reports').insert({
-      'task_id': widget.taskId,
-      'tool_name': widget.toolName,
-      'inspection_date': currentDate!.toIso8601String(),
-      'next_inspection_date': nextDate!.toIso8601String(),
-      'company_name': companyName,
-      'company_rep': companyRep.text.trim(),
-      'technician_name': technicianName,
-      'steps': steps.map((s) => {
-        'step': s,
-        'checked': checks[s],
-        'note': notes[s]!.text.trim(),
-      }).toList(),
-      'technician_signed': true,
-      'company_signed': true,
-    });
-
-    await supabase.from('periodic_tasks').update({'status': 'done'}).eq('id', widget.taskId);
-    await supabase.from('safety_tools').update({'next_maintenance_date': nextDate!.toIso8601String()}).eq('name', widget.toolName);
-    await supabase.from('export_requests').insert({
-      'tool_code': widget.toolName,
-      'reason': 'حسب تقرير فحص دوري - ${notes.entries.where((e) => e.value.text.isNotEmpty).map((e) => e.value.text).join(', ')}',
-      'created_by': supabase.auth.currentUser!.id,
-      'created_by_role': 'فني السلامة العامة'
-    });
-
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير وإرسال الأداة للإخراج')));
+ Future<void> _submitReport() async {
+  if (!_formKey.currentState!.validate() || currentDate == null || technicianSignature.isEmpty || companySignature.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')));
+    return;
   }
+
+  final writtenNotes = notes.entries
+    .where((e) => e.value.text.trim().isNotEmpty)
+    .map((e) => {
+      'toolName': widget.toolName,
+      'note': e.value.text.trim(),
+    }).toList();
+
+  // 1. Save report
+  await supabase.from('fire_extinguisher_correctiveEmergency').insert({
+    'task_id': widget.taskId,
+    'task_type': widget.taskType,
+    'tool_name': widget.toolName,
+    'inspection_date': currentDate!.toIso8601String(),
+    'next_inspection_date': nextDate!.toIso8601String(),
+    'company_name': companyName,
+    'company_rep': companyRep.text.trim(),
+    'technician_name': technicianName,
+    'steps': steps.map((s) => {
+      'step': s,
+      'checked': checks[s],
+      'note': notes[s]!.text.trim(),
+    }).toList(),
+    'technician_signed': true,
+    'company_signed': true,
+  });
+
+  // 2. Update task status
+  final taskTable = widget.taskType == 'طارئ' ? 'emergency_tasks' : 'corrective_tasks';
+  await supabase.from(taskTable).update({'status': 'done'}).eq('id', widget.taskId);
+
+  // 3. Update next maintenance date
+  await supabase.from('safety_tools')
+      .update({'next_maintenance_date': nextDate!.toIso8601String()})
+      .eq('name', widget.toolName);
+
+  // 4. Navigate to export request page if there are notes
+  if (writtenNotes.isNotEmpty && context.mounted) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MaterialExitAuthorizationPage(
+          materials: writtenNotes,
+          technicianName: technicianName ?? '',
+        ),
+      ),
+    );
+  } else {
+    if (!context.mounted) return;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير')));
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +156,7 @@ setState(() => companyName = data?['company_name']);
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('تقرير فحص صنبور الحريق', style: TextStyle(color: Colors.white)),
+          title: const Text('تقرير فحص طفاية حريق', style: TextStyle(color: Colors.white)),
           centerTitle: true,
           backgroundColor: const Color(0xff00408b),
           leading: IconButton(
@@ -138,17 +168,11 @@ setState(() => companyName = data?['company_name']);
                   title: const Text('تأكيد الخروج'),
                   content: const Text('هل أنت متأكد من رغبتك في مغادرة التقرير؟'),
                   actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('لا'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.pop(context);
-                      },
-                      child: const Text('نعم'),
-                    ),
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('لا')),
+                    TextButton(onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                    }, child: const Text('نعم')),
                   ],
                 ),
               );
@@ -194,7 +218,7 @@ setState(() => companyName = data?['company_name']);
                           icon: const Icon(Icons.edit_note),
                           onPressed: () => showDialog(
                             context: context,
-                            builder: (_) => AlertDialog(
+                            builder: (_) => AlertDialog( 
                               title: Text('ملاحظات لـ $step'),
                               content: TextFormField(controller: notes[step], maxLines: 4, textAlign: TextAlign.right),
                               actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('تم'))],

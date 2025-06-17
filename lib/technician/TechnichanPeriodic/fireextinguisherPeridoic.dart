@@ -6,8 +6,9 @@ import 'package:intl/intl.dart';
 class FireExtinguisherReportPage extends StatefulWidget {
   final String taskId;
   final String toolName;
+  final String technicianName;
 
-  const FireExtinguisherReportPage({super.key, required this.taskId, required this.toolName});
+  const FireExtinguisherReportPage({super.key, required this.taskId, required this.toolName, required this.technicianName});
 
   @override
   State<FireExtinguisherReportPage> createState() => _FireExtinguisherReportPageState();
@@ -24,7 +25,6 @@ class _FireExtinguisherReportPageState extends State<FireExtinguisherReportPage>
   final _formKey = GlobalKey<FormState>();
   final TextEditingController companyRep = TextEditingController();
   String? companyName;
-  String? technicianName;
 
   final List<String> steps = [
     'الطلاء لجسم الطفاية',
@@ -45,29 +45,20 @@ class _FireExtinguisherReportPageState extends State<FireExtinguisherReportPage>
       checks[step] = false;
       notes[step] = TextEditingController();
     }
-    _fetchTechnician();
     _fetchCompany();
   }
 
-  Future<void> _fetchTechnician() async {
-    final user = supabase.auth.currentUser;
-    if (user != null) {
-      final data = await supabase.from('users').select('name').eq('id', user.id).maybeSingle();
-      setState(() => technicianName = data?['name']);
-    }
-  }
-
-Future<void> _fetchCompany() async {
-  final currentYear = DateTime.now().year;
+  Future<void> _fetchCompany() async {
+    final currentYear = DateTime.now().year;
     final data = await supabase
-      .from('contract_companies')
-      .select('company_name')
-      .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
-      .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
-      .maybeSingle();
+        .from('contract_companies')
+        .select('company_name')
+        .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
+        .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
+        .maybeSingle();
 
-  setState(() => companyName = data?['company_name']);
-}
+    setState(() => companyName = data?['company_name']);
+  }
 
   void _pickDate() async {
     final now = DateTime.now();
@@ -91,6 +82,15 @@ Future<void> _fetchCompany() async {
       return;
     }
 
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final stepsData = steps.map((s) => {
+      'step': s,
+      'checked': checks[s],
+      'note': notes[s]!.text.trim(),
+    }).toList();
+
     await supabase.from('fire_extinguisher_reports').insert({
       'task_id': widget.taskId,
       'tool_name': widget.toolName,
@@ -98,25 +98,34 @@ Future<void> _fetchCompany() async {
       'next_inspection_date': nextDate!.toIso8601String(),
       'company_name': companyName,
       'company_rep': companyRep.text.trim(),
-      'technician_name': technicianName,
-      'steps': steps.map((s) => {
-        'step': s,
-        'checked': checks[s],
-        'note': notes[s]!.text.trim(),
-      }).toList(),
+      'technician_name': widget.technicianName,
+      'steps': stepsData,
       'technician_signed': true,
       'company_signed': true,
     });
 
     await supabase.from('periodic_tasks').update({'status': 'done'}).eq('id', widget.taskId);
     await supabase.from('safety_tools').update({'next_maintenance_date': nextDate!.toIso8601String()}).eq('name', widget.toolName);
-    await supabase.from('export_requests').insert({
-      'tool_code': widget.toolName,
-      'reason': 'حسب تقرير فحص دوري - ${notes.entries.where((e) => e.value.text.isNotEmpty).map((e) => e.value.text).join(', ')}',
-      'created_by': supabase.auth.currentUser!.id,
-      'created_by_role': 'فني السلامة العامة'
-    });
 
+    final materialsToExport = stepsData
+        .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
+        .map((s) => {
+              'toolName': widget.toolName,
+              'note': s['note']
+            })
+        .toList();
+
+    if (materialsToExport.isNotEmpty) {
+      await supabase.from('material_exit_authorizations').insert({
+        'technician_id': user.id,
+        'technician_name': widget.technicianName,
+        'materials': materialsToExport,
+        'agreed': true,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    }
+
+    if (!mounted) return;
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير وإرسال الأداة للإخراج')));
   }
@@ -131,31 +140,30 @@ Future<void> _fetchCompany() async {
           centerTitle: true,
           backgroundColor: const Color(0xff00408b),
           leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('تأكيد الخروج'),
-          content: const Text('هل أنت متأكد من رغبتك في مغادرة التقرير؟'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context), // يغلق الحوار فقط
-              child: const Text('لا'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // يغلق الحوار
-                Navigator.pop(context); // يرجع للخلف
-              },
-              child: const Text('نعم'),
-            ),
-          ],
-        ),
-      );
-        },
-      ),
-      
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('تأكيد الخروج'),
+                  content: const Text('هل أنت متأكد من رغبتك في مغادرة التقرير؟'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('لا'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.pop(context);
+                      },
+                      child: const Text('نعم'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -238,7 +246,7 @@ Future<void> _fetchCompany() async {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('اسم الفني: ${technicianName ?? '...'}'),
+                        Text('اسم الفني: ${widget.technicianName}'),
                         const Text('توقيع الفني:'),
                         Signature(controller: technicianSignature, height: 100, backgroundColor: Colors.grey[200]!),
                       ],
