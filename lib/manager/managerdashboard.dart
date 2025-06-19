@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:FireWatch/manager/missions/add_edit_page.dart';
 import 'package:FireWatch/manager/missions/reports_page.dart';
 import 'package:FireWatch/manager/missions/tasks_page.dart';
-
+import 'package:FireWatch/My/BuildTile.dart';
 class ManagerDashboard extends StatelessWidget {
   static const String managerDashboardRoute = 'managerdashboard';
 
@@ -36,18 +36,18 @@ class ManagerDashboard extends StatelessWidget {
                       ),
                       actions: <Widget>[
                         TextButton(
-                          child: const Text('إلغاء'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                        TextButton(
                           child: const Text('نعم'),
                           onPressed: () {
                             Navigator.of(context).pop();
                             Navigator.of(
                               context,
                             ).popUntil((route) => route.isFirst);
+                          },
+                        ),
+                        TextButton(
+                          child: const Text('إلغاء'),
+                          onPressed: () {
+                            Navigator.of(context).pop();
                           },
                         ),
                       ],
@@ -59,24 +59,24 @@ class ManagerDashboard extends StatelessWidget {
           ),
         ),
         body: ListView(
-          padding: const EdgeInsets.fromLTRB(30, 50, 30, 50),
+          padding: const EdgeInsets.fromLTRB(30, 70, 30, 50),
           children: [
-            _buildTile(
-              context,
+            BuildTile(
+             
               title: 'المهام',
               icon: Icons.task_alt,
               destination: const TasksMainPage(),
             ),
             const SizedBox(height: 12),
-            _buildTile(
-              context,
+            BuildTile(
+            
               title: 'إضافة وتعديل',
               icon: Icons.edit,
               destination: const AddEditPage(),
             ),
             const SizedBox(height: 12),
-            _buildTile(
-              context,
+            BuildTile(
+             
               title: 'التقارير',
               icon: Icons.insert_chart,
               destination: const ReportsDashboardPage(),
@@ -86,40 +86,6 @@ class ManagerDashboard extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildTile(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Widget destination,
-  }) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 4,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => destination),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 36,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 8),
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
+
+

@@ -1,4 +1,3 @@
-// import 'package:FireWatch/Start/resetpassword.dart';
 import 'package:FireWatch/Start/signup.dart';
 import 'package:FireWatch/head/headdashboard.dart';
 import 'package:FireWatch/manager/managerdashboard.dart';

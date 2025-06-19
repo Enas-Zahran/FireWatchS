@@ -6,11 +6,37 @@ import 'package:FireWatch/manager/managerTasks/periodicManager.dart';
 import 'package:FireWatch/manager/managerTasks/correctiveManager.dart';
 import 'package:FireWatch/manager/managerTasks/emergencyManager.dart';
 import 'package:FireWatch/manager/managerTasks/notificationsManager.dart';
+import 'package:FireWatch/My/BuildTile.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class TasksMainPage extends StatelessWidget {
-  static const String routeName = 'tasksMainPage';
-
+class TasksMainPage extends StatefulWidget {
   const TasksMainPage({super.key});
+
+  @override
+  State<TasksMainPage> createState() => _TasksMainPageState();
+}
+
+class _TasksMainPageState extends State<TasksMainPage> {
+  bool _hasPendingRequests = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPendingRequests();
+  }
+
+  Future<void> _checkPendingRequests() async {
+    final data = await Supabase.instance.client
+        .from('emergency_requests')
+        .select('id')
+        .eq('is_approved', false)
+        .neq('created_by_role', 'المدير')
+        .limit(1);
+
+    setState(() {
+      _hasPendingRequests = data.isNotEmpty;
+    });
+  }
 
   void _showAddOptions(BuildContext context) {
     showModalBottomSheet(
@@ -62,14 +88,29 @@ class TasksMainPage extends StatelessWidget {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.check, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.mail, color: Colors.white),
+                  if (_hasPendingRequests)
+                    const Positioned(
+                      top: -4,
+                      right: -4,
+                      child: CircleAvatar(
+                        radius: 6,
+                        backgroundColor: Color(0xffae2f34),
+                      ),
+                    ),
+                ],
+              ),
+              onPressed: () async {
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => PendingEmergencyRequestsPage(),
+                    builder: (context) => const PendingEmergencyRequestsPage(),
                   ),
                 );
+                _checkPendingRequests(); // يعيد التحقق بعد العودة
               },
             ),
             IconButton(
@@ -96,63 +137,24 @@ class TasksMainPage extends StatelessWidget {
         body: ListView(
           padding: const EdgeInsets.fromLTRB(30, 50, 30, 30),
           children: [
-            _buildTile(
-              context,
+            BuildTile(
               title: 'دوري',
               icon: Icons.access_time,
-              destinationPage: const PeriodicTasksPage(),
+              destination: const PeriodicTasksPage(),
             ),
             const SizedBox(height: 12),
-            _buildTile(
-              context,
+            BuildTile(
               title: 'علاجي',
               icon: Icons.healing,
-              destinationPage: CorrectiveTasksPage(),
+              destination: CorrectiveTasksPage(),
             ),
             const SizedBox(height: 12),
-            _buildTile(
-              context,
+            BuildTile(
               title: 'طارئ',
               icon: Icons.report,
-              destinationPage: EmergencyTasksPage(),
+              destination: EmergencyTasksPage(),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTile(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Widget destinationPage,
-  }) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 4,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => destinationPage),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 36,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 8),
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-            ],
-          ),
         ),
       ),
     );
