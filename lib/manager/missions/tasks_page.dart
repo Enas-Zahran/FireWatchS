@@ -110,7 +110,7 @@ class _TasksMainPageState extends State<TasksMainPage> {
                     builder: (context) => const PendingEmergencyRequestsPage(),
                   ),
                 );
-                _checkPendingRequests(); // يعيد التحقق بعد العودة
+                _checkPendingRequests(); 
               },
             ),
             IconButton(
@@ -135,7 +135,7 @@ class _TasksMainPageState extends State<TasksMainPage> {
           ),
         ),
         body: ListView(
-          padding: const EdgeInsets.fromLTRB(30, 50, 30, 30),
+          padding: const EdgeInsets.fromLTRB(30, 70, 30, 50),
           children: [
             BuildTile(
               title: 'دوري',

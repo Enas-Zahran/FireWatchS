@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:FireWatch/My/InputDecoration.dart';
-import 'package:intl/intl.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/toolDetails.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/addSafteyTool.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/editSafteyTool.dart';
@@ -9,7 +8,7 @@ import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/Permessions/ex
 
 //Todo السعر لازم يتغير تلقائي حسب النوع
 class AllToolsPage extends StatefulWidget {
-  static const String routeName = '/all-tools';
+ 
 
   @override
   State<AllToolsPage> createState() => _AllToolsPageState();
@@ -87,7 +86,7 @@ class _AllToolsPageState extends State<AllToolsPage> {
           actions: [
             IconButton(icon: const Icon(Icons.add), onPressed: _goToAddTool),
             IconButton(
-              icon: const Icon(Icons.check, color: Colors.white),
+              icon: const Icon(Icons.mail, color: Colors.white),
               onPressed: () {
                 Navigator.push(
                   context,

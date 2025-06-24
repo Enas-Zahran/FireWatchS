@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:FireWatch/My/InputDecoration.dart';
 import 'package:FireWatch/manager/managerAddEdit/UsersManger/pendingApprovals.dart';
 import 'package:FireWatch/manager/managerAddEdit/UsersManger/editUser.dart';
 
@@ -13,7 +12,7 @@ class ManagerUserListPage extends StatefulWidget {
 
 class _ManagerUserListPageState extends State<ManagerUserListPage> {
   final _searchController = TextEditingController();
-
+  bool _hasPendingRequests = false;
   List<String> selectedTaskRanges = [];
   List<String> selectedToolTypes = [];
   List<String> selectedMaterialTypes = [];
@@ -38,6 +37,19 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
   void initState() {
     super.initState();
     _fetchUsers();
+    _checkPendingRequests();
+  }
+
+  Future<void> _checkPendingRequests() async {
+    final data = await Supabase.instance.client
+        .from('users')
+        .select('id')
+        .eq('is_approved', false)
+        .limit(1);
+
+    setState(() {
+      _hasPendingRequests = data.isNotEmpty;
+    });
   }
 
   Future<void> _fetchUsers() async {
@@ -93,9 +105,9 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
         }).toList();
   }
 
-  void _openFilterDrawer() {
-    Scaffold.of(context).openEndDrawer();
-  }
+  // void _openFilterDrawer() {
+  //   Scaffold.of(context).openEndDrawer();
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -167,20 +179,39 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
                     onPressed: () => Scaffold.of(context).openEndDrawer(),
                   ),
             ),
+
             IconButton(
-              icon: const Icon(Icons.check),
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.mail, color: Colors.white),
+                  if (_hasPendingRequests)
+                    const Positioned(
+                      top: -4,
+                      right: -4,
+                      child: CircleAvatar(
+                        radius: 6,
+                        backgroundColor: Color(0xffae2f34),
+                      ),
+                    ),
+                ],
+              ),
               onPressed: () async {
                 final result = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => PendingApprovalsPage()),
+                  MaterialPageRoute(
+                    builder: (context) => PendingApprovalsPage(),
+                  ),
                 );
                 if (result == true) {
                   _fetchUsers();
                 }
+                _checkPendingRequests();
               },
             ),
           ],
         ),
+
         endDrawer: Drawer(
           child: SafeArea(
             child: ListView(

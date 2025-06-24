@@ -13,43 +13,48 @@ class EditToolPricePage extends StatefulWidget {
 class _EditToolPricePageState extends State<EditToolPricePage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _priceController;
+  late TextEditingController _companyController;
 
   @override
   void initState() {
     super.initState();
-    _priceController = TextEditingController(text: widget.priceEntry['price'].toString());
+    _priceController =
+        TextEditingController(text: widget.priceEntry['price'].toString());
+    _companyController = TextEditingController(
+        text: widget.priceEntry['company_name'] ?? '');
   }
 
- Future<void> _updatePrice() async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _updatePrice() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  final newPrice = double.parse(_priceController.text.trim());
+    final newPrice = double.parse(_priceController.text.trim());
+    final newCompany = _companyController.text.trim();
 
-  final toolType = widget.priceEntry['tool_type'];
-  final materialType = widget.priceEntry['material_type'];
-  final capacity = widget.priceEntry['capacity'];
+    final toolType = widget.priceEntry['tool_type'];
+    final materialType = widget.priceEntry['material_type'];
+    final capacity = widget.priceEntry['capacity'];
 
-  // 1. تحديث جدول الأسعار
-  await Supabase.instance.client
-      .from('safety_tool_prices')
-      .update({'price': newPrice})
-      .eq('id', widget.priceEntry['id']);
+    await Supabase.instance.client
+        .from('safety_tool_prices')
+        .update({
+          'price': newPrice,
+          'company_name': newCompany,
+        })
+        .eq('id', widget.priceEntry['id']);
 
-  // 2. تحديث جميع الأدوات المرتبطة بنفس النوع والمادة والسعة
-  await Supabase.instance.client
-      .from('safety_tools')
-      .update({'price': newPrice})
-      .eq('type', toolType)
-      .eq('material_type', materialType)
-      .eq('capacity', capacity);
+    await Supabase.instance.client
+        .from('safety_tools')
+        .update({'price': newPrice})
+        .eq('type', toolType)
+        .eq('material_type', materialType)
+        .eq('capacity', capacity);
 
-  if (!mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('تم تحديث السعر بنجاح')),
-  );
-  Navigator.pop(context);
-}
-
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تم تحديث السعر بنجاح')),
+    );
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +65,8 @@ class _EditToolPricePageState extends State<EditToolPricePage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: Center(child: Text('تعديل السعر',style: TextStyle(color: Colors.white),)),
+          title: const Center(
+              child: Text('تعديل السعر', style: TextStyle(color: Colors.white))),
           backgroundColor: const Color(0xff00408b),
           iconTheme: const IconThemeData(color: Colors.white),
         ),
@@ -69,15 +75,28 @@ class _EditToolPricePageState extends State<EditToolPricePage> {
           child: Form(
             key: _formKey,
             child: Column(
-        
               children: [
-                 Text('تعديل السعر: $title'),
+                Text('تعديل السعر: $title'),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _companyController,
+                  decoration: customInputDecoration.copyWith(
+                      labelText: 'الشركة التي تم الشراء منها'),
+                  validator: (val) => val == null || val.trim().isEmpty
+                      ? 'يرجى إدخال اسم الشركة'
+                      : null,
+                  textAlign: TextAlign.right,
+                ),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _priceController,
                   keyboardType: TextInputType.number,
-                  decoration: customInputDecoration.copyWith(labelText: 'السعر الجديد'),
+                  decoration:
+                      customInputDecoration.copyWith(labelText: 'السعر الجديد'),
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) return 'يرجى إدخال السعر';
+                    if (val == null || val.trim().isEmpty) {
+                      return 'يرجى إدخال السعر';
+                    }
                     final num? parsed = num.tryParse(val.trim());
                     if (parsed == null || parsed <= 0) return 'سعر غير صالح';
                     return null;

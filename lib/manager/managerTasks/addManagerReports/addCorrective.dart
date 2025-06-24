@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:FireWatch/My/InputDecoration.dart';
 
 class AddCorrectiveTaskManagerPage extends StatefulWidget {
   static const String routeName = 'addCorrectiveTaskManagerPage';
@@ -70,9 +71,9 @@ class _AddCorrectiveTaskManagerPageState
       );
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('حدث خطأ: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('حدث خطأ: $e')));
     } finally {
       setState(() => isLoading = false);
     }
@@ -113,9 +114,10 @@ class _AddCorrectiveTaskManagerPageState
                     width: 400,
                     child: ElevatedButton(
                       onPressed: isLoading ? null : _submit,
-                      child: isLoading
-                          ? const CircularProgressIndicator()
-                          : const Text('إضافة'),
+                      child:
+                          isLoading
+                              ? const CircularProgressIndicator()
+                              : const Text('إضافة'),
                     ),
                   ),
                 ),
@@ -134,9 +136,9 @@ class _AddCorrectiveTaskManagerPageState
         width: 400,
         child: TextField(
           controller: controller,
-          decoration: InputDecoration(
+          decoration: customInputDecoration.copyWith(
             labelText: label,
-            border: const OutlineInputBorder(),
+            hintText: 'أدخل $label',
           ),
           textDirection: TextDirection.rtl,
         ),
@@ -152,8 +154,9 @@ class _AddCorrectiveTaskManagerPageState
         child: TypeAheadField<String>(
           suggestionsCallback: (pattern) {
             return toolNames
-                .where((name) =>
-                    name.toLowerCase().contains(pattern.toLowerCase()))
+                .where(
+                  (name) => name.toLowerCase().contains(pattern.toLowerCase()),
+                )
                 .toList();
           },
           builder: (context, controller, focusNode) {
@@ -162,9 +165,9 @@ class _AddCorrectiveTaskManagerPageState
               controller: controller,
               focusNode: focusNode,
               textDirection: TextDirection.rtl,
-              decoration: const InputDecoration(
+              decoration: customInputDecoration.copyWith(
                 labelText: 'اسم أداة السلامة',
-                border: OutlineInputBorder(),
+                hintText: 'أدخل اسم الأداة',
               ),
             );
           },
@@ -177,9 +180,9 @@ class _AddCorrectiveTaskManagerPageState
             _toolController.text = suggestion;
             selectedToolName = suggestion;
           },
-          emptyBuilder: (context) => const ListTile(
-            title: Text('لم يتم العثور على نتائج'),
-          ),
+          emptyBuilder:
+              (context) =>
+                  const ListTile(title: Text('لم يتم العثور على نتائج')),
         ),
       ),
     );

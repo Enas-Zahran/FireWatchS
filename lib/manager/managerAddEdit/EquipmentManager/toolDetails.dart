@@ -24,6 +24,7 @@ class ToolDetailsPage extends StatelessWidget {
     final type = tool['type'] ?? '';
     final material = tool['material_type'] ?? '';
     final capacity = tool['capacity'] ?? '';
+    final company = tool['company_name'] ?? 'غير محددة';
     final price = (tool['price'] as num?)?.toDouble();
     final lastMaintenance = formatDate(tool['last_maintenance_date']);
     final nextMaintenance = formatDate(tool['next_maintenance_date']);
@@ -39,7 +40,7 @@ class ToolDetailsPage extends StatelessWidget {
             child: Text(name, style: const TextStyle(color: Colors.white)),
           ),
           iconTheme: const IconThemeData(color: Colors.white),
-            leading: IconButton(
+          leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () {
               Navigator.pop(context);
@@ -55,6 +56,7 @@ class ToolDetailsPage extends StatelessWidget {
                   buildInfoTile('نوع الأداة', type),
                   buildInfoTile('نوع المادة', material),
                   buildInfoTile('السعة', capacity),
+                  buildInfoTile('الشركة', company),
                   buildInfoTile('آخر صيانة تمت', lastMaintenance),
                   buildInfoTile('الصيانة القادمة', nextMaintenance),
                   const SizedBox(height: 12),
@@ -107,26 +109,30 @@ class ToolDetailsPage extends StatelessWidget {
   }
 
   Widget buildInfoTile(String label, String value, {bool bold = false}) {
-    return SizedBox(
-      width: 400,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-                color: bold ? const Color(0xff00408b) : Colors.black87,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: SizedBox(
+        width: 400,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+                 Text(
+                label,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-          ],
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+                  color: bold ? const Color(0xff00408b) : Colors.black87,
+                ),
+              ),
+           
+            ],
+          ),
         ),
       ),
     );

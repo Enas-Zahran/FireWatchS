@@ -12,6 +12,7 @@ class AddToolPricePage extends StatefulWidget {
 class _AddToolPricePageState extends State<AddToolPricePage> {
   final _formKey = GlobalKey<FormState>();
   final _priceController = TextEditingController();
+  final _companyController = TextEditingController();
 
   String? _selectedToolType;
   String? _selectedMaterialType;
@@ -37,49 +38,78 @@ class _AddToolPricePageState extends State<AddToolPricePage> {
     'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي': ['1 kg', '2 kg', '3 kg', '4 kg', '6 kg', '9 kg', '25 kg', '50 kg'],
   };
 
- Future<void> _submit() async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _submit() async {
+  print("Submit button pressed");
 
-  // Safe unwrap because form validation already ensures they're not null
-  final toolType = _selectedToolType!;
-  final materialType = _selectedMaterialType!;
-  final capacity = _selectedCapacity!;
-  final price = double.parse(_priceController.text.trim());
-
-  // Check if this combination already exists
-  final existing = await Supabase.instance.client
-      .from('safety_tool_prices')
-      .select()
-      .eq('tool_type', toolType)
-      .eq('material_type', materialType)
-      .eq('capacity', capacity)
-      .maybeSingle();
-
-  if (existing != null) {
+  if (_selectedToolType == null ||
+      _selectedMaterialType == null ||
+      _selectedCapacity == null) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('تمت إضافة هذا السعر مسبقاً'),
-        backgroundColor: Colors.orange,
-      ),
+      const SnackBar(content: Text('يرجى اختيار كل الحقول قبل الإضافة')),
     );
     return;
   }
 
-  // Insert only if not duplicate
-  await Supabase.instance.client.from('safety_tool_prices').insert({
-    'tool_type': toolType,
-    'material_type': materialType,
-    'capacity': capacity,
-    'price': price,
-  });
+  if (!_formKey.currentState!.validate()) {
+    print("Form not valid");
+    return;
+  }
 
-  if (!mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('تمت إضافة السعر بنجاح')),
-  );
-  Navigator.pop(context);
+  final toolType = _selectedToolType!;
+  final materialType = _selectedMaterialType!;
+  final capacity = _selectedCapacity!;
+  final companyName = _companyController.text.trim();
+  final price = double.tryParse(_priceController.text.trim());
+
+  if (price == null) {
+    print("Invalid price");
+    return;
+  }
+
+  print("Checking for existing entry...");
+
+  try {
+    final existing = await Supabase.instance.client
+        .from('safety_tool_prices')
+        .select()
+        .eq('tool_type', toolType)
+        .eq('material_type', materialType)
+        .eq('capacity', capacity)
+        .eq('company_name', companyName)
+        .maybeSingle();
+
+    if (existing != null) {
+      print("Duplicate found");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تمت إضافة هذا السعر مسبقاً لنفس الشركة'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    print("Inserting...");
+    await Supabase.instance.client.from('safety_tool_prices').insert({
+      'tool_type': toolType,
+      'material_type': materialType,
+      'capacity': capacity,
+      'company_name': companyName,
+      'price': price,
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تمت إضافة السعر بنجاح')),
+    );
+    Navigator.pop(context);
+  } catch (e) {
+    print("ERROR: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')),
+    );
+  }
 }
-
 
   @override
   Widget build(BuildContext context) {
@@ -133,6 +163,14 @@ class _AddToolPricePageState extends State<AddToolPricePage> {
                       setState(() => _selectedCapacity = val);
                     },
                   ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _companyController,
+                  decoration: customInputDecoration.copyWith(labelText: 'الشركة التي تم الشراء منها'),
+                  validator: (val) =>
+                      val == null || val.trim().isEmpty ? 'يرجى إدخال اسم الشركة' : null,
+                  textAlign: TextAlign.right,
+                ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _priceController,

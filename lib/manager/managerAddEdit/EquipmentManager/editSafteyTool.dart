@@ -15,6 +15,7 @@ class EditSafetyToolPage extends StatefulWidget {
 class _EditSafetyToolPageState extends State<EditSafetyToolPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _companyController = TextEditingController();
   String? _selectedType;
   String? _selectedMaterial;
   String? _selectedCapacity;
@@ -26,7 +27,7 @@ class _EditSafetyToolPageState extends State<EditSafetyToolPage> {
       'البودرة الجافة',
       'الرغوة (B.C.F)',
       'الماء',
-      'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي'
+      'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي',
     ],
     'hose reel': ['الماء'],
     'fire hydrant': ['الماء'],
@@ -35,9 +36,13 @@ class _EditSafetyToolPageState extends State<EditSafetyToolPage> {
   final Map<String, List<String>> capacityOptions = {
     'ثاني اكسيد الكربون': ['2 kg', '5 kg', '6 kg', '10 kg', '20 kg', '30 kg'],
     'البودرة الجافة': ['1 kg', '2 kg', '6 kg', '12 kg', '25 kg', '50 kg'],
-    'الرغوة (B.C.F)': ['1 L', '2 L', '3 L', '4 L', '6 L', '9 L', '25 L', '50 L'],
+    'الرغوة (B.C.F)': [
+      '1 L', '2 L', '3 L', '4 L', '6 L', '9 L', '25 L', '50 L'
+    ],
     'الماء': ['1 L', '2 L', '3 L', '4 L', '6 L', '9 L', '25 L', '50 L'],
-    'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي': ['1 kg', '2 kg', '3 kg', '4 kg', '6 kg', '9 kg', '25 kg', '50 kg'],
+    'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي': [
+      '1 kg', '2 kg', '3 kg', '4 kg', '6 kg', '9 kg', '25 kg', '50 kg'
+    ],
   };
 
   @override
@@ -45,6 +50,7 @@ class _EditSafetyToolPageState extends State<EditSafetyToolPage> {
     super.initState();
     final tool = widget.tool;
     _nameController.text = tool['name'] ?? '';
+    _companyController.text = tool['company_name'] ?? '';
     _selectedType = tool['type'];
     _selectedMaterial = tool['material_type'];
     _selectedCapacity = tool['capacity'];
@@ -53,6 +59,41 @@ class _EditSafetyToolPageState extends State<EditSafetyToolPage> {
 
   Future<void> _updateTool() async {
     if (!_formKey.currentState!.validate() || _purchaseDate == null) return;
+
+    final type = _selectedType!;
+    final material = _selectedMaterial!;
+    final capacity = _selectedCapacity!;
+    final company = _companyController.text.trim();
+
+    final priceResponse = await Supabase.instance.client
+        .from('safety_tool_prices')
+        .select()
+        .eq('tool_type', type)
+        .eq('material_type', material)
+        .eq('capacity', capacity)
+        .eq('company_name', company)
+        .maybeSingle();
+
+    if (priceResponse == null) {
+      showDialog(
+        context: context,
+        builder: (_) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('لا يوجد سعر'),
+            content: Text(
+                'لا يوجد سعر لهذه الأداة في شركة "$company".\nيرجى إضافة السعر أولاً أو اختيار شركة مختلفة.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('حسناً'),
+              ),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
 
     final nextMaintenanceDate = DateTime(
       _purchaseDate!.year + 1,
@@ -64,9 +105,10 @@ class _EditSafetyToolPageState extends State<EditSafetyToolPage> {
         .from('safety_tools')
         .update({
           'name': _nameController.text.trim(),
-          'type': _selectedType,
-          'material_type': _selectedMaterial,
-          'capacity': _selectedCapacity,
+          'type': type,
+          'material_type': material,
+          'capacity': capacity,
+          'company_name': company,
           'purchase_date': _purchaseDate!.toIso8601String(),
           'next_maintenance_date': nextMaintenanceDate.toIso8601String(),
         })
@@ -86,13 +128,16 @@ class _EditSafetyToolPageState extends State<EditSafetyToolPage> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: const Color(0xff00408b),
-          title: const Center(child: Text('تعديل أداة سلامة', style: TextStyle(color: Colors.white))),
+          title: const Center(
+            child: Text(
+              'تعديل أداة سلامة',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
           iconTheme: const IconThemeData(color: Colors.white),
-            leading: IconButton(
+          leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
           ),
         ),
         body: Center(
@@ -136,14 +181,16 @@ class _EditSafetyToolPageState extends State<EditSafetyToolPage> {
                         label: 'السعة',
                         value: _selectedCapacity,
                         items: capacityOptions[_selectedMaterial!]!,
-                        onChanged: (val) {
-                          setState(() => _selectedCapacity = val);
-                        },
+                        onChanged: (val) => setState(() => _selectedCapacity = val),
                       ),
+                    const SizedBox(height: 12),
+                    buildTextField('الشركة التي تم الشراء منها', _companyController),
                     const SizedBox(height: 12),
                     ListTile(
                       tileColor: Colors.grey.shade200,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       title: Text(
                         _purchaseDate == null
                             ? 'اختر تاريخ الشراء'

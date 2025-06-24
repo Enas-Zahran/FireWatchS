@@ -49,7 +49,7 @@ class _PendingApprovalsPageState extends State<PendingApprovalsPage> {
   Future<void> _deleteUser(String id) async {
     await Supabase.instance.client.from('users').delete().eq('id', id);
 
-    // ✅ Refresh local list
+  
     await _fetchPendingUsers();
 
     // ✅ Return if all users deleted

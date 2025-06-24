@@ -21,7 +21,7 @@ class ReportsDashboardPage extends StatelessWidget {
           ),
         ),
         body: ListView(
-          padding: const EdgeInsets.fromLTRB(30, 70, 30, 30),
+          padding: const EdgeInsets.fromLTRB(30, 120, 30, 30),
           children: [
             _buildTile(
               context,

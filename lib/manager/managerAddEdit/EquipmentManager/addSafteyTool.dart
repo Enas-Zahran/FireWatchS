@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
- import 'package:intl/intl.dart';
+import 'package:intl/intl.dart';
 import 'package:FireWatch/My/InputDecoration.dart';
 
 class AddSafetyToolPage extends StatefulWidget {
@@ -13,10 +13,12 @@ class AddSafetyToolPage extends StatefulWidget {
 class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _companyController = TextEditingController();
   String? _selectedType;
   String? _selectedMaterial;
   String? _selectedCapacity;
   DateTime? _purchaseDate;
+  double? _price;
 
   final Map<String, List<String>> materialOptions = {
     'fire extinguisher': [
@@ -48,11 +50,24 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
     );
 
     try {
+      final priceData = await Supabase.instance.client
+          .from('safety_tool_prices')
+          .select('price')
+          .eq('tool_type', _selectedType ?? '')
+          .eq('material_type', _selectedMaterial ?? '')
+          .eq('capacity', _selectedCapacity ?? '')
+          .eq('company_name', _companyController.text.trim())
+          .maybeSingle();
+
+      _price = priceData != null ? double.tryParse(priceData['price'].toString()) : 0.0;
+
       await Supabase.instance.client.from('safety_tools').insert({
         'name': _nameController.text.trim(),
         'type': _selectedType,
         'material_type': _selectedMaterial,
         'capacity': _selectedCapacity,
+        'company_name': _companyController.text.trim(),
+        'price': _price,
         'purchase_date': _purchaseDate!.toIso8601String(),
         'last_maintenance_date': DateTime.now().toIso8601String(),
         'next_maintenance_date': nextMaintenanceDate.toIso8601String(),
@@ -76,7 +91,7 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
           backgroundColor: const Color(0xff00408b),
           title: const Center(child: Text('إضافة أداة سلامة', style: TextStyle(color: Colors.white))),
           iconTheme: const IconThemeData(color: Colors.white),
-            leading: IconButton(
+          leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () {
               Navigator.pop(context);
@@ -128,6 +143,8 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
                           setState(() => _selectedCapacity = val);
                         },
                       ),
+                    const SizedBox(height: 12),
+                    buildTextField('الشركة التي تم الشراء منها', _companyController),
                     const SizedBox(height: 12),
                     ListTile(
                       tileColor: Colors.grey.shade200,
@@ -196,8 +213,7 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
         value: value,
         decoration: customInputDecoration.copyWith(labelText: label),
         items: items
-            .map((item) => DropdownMenuItem(value: item,
-             child: Text(item)))
+            .map((item) => DropdownMenuItem(value: item, child: Text(item)))
             .toList(),
         onChanged: onChanged,
         validator: (val) => val == null ? 'يرجى اختيار $label' : null,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:FireWatch/My/InputDecoration.dart';
 
 class AddEmergencyTaskManagerPage extends StatefulWidget {
   static const routeName = 'addEmergencyTaskManagerPage';
@@ -131,9 +132,9 @@ class _AddEmergencyTaskManagerPageState
         width: 400,
         child: TextField(
           controller: controller,
-          decoration: InputDecoration(
+          decoration: customInputDecoration.copyWith(
             labelText: label,
-            border: const OutlineInputBorder(),
+            hintText: 'أدخل $label',
           ),
           textDirection: TextDirection.rtl,
         ),
@@ -155,14 +156,14 @@ class _AddEmergencyTaskManagerPageState
                 .toList();
           },
           builder: (context, controller, focusNode) {
-            _toolController.text = controller.text; // keep controller updated
+            _toolController.text = controller.text;
             return TextField(
               controller: controller,
               focusNode: focusNode,
               textDirection: TextDirection.rtl,
-              decoration: const InputDecoration(
+              decoration: customInputDecoration.copyWith(
                 labelText: 'رمز أداة السلامة',
-                border: OutlineInputBorder(),
+                hintText: 'أدخل رمز الأداة',
               ),
             );
           },

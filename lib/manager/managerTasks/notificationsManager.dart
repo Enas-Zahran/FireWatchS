@@ -23,7 +23,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     try {
       final today = DateTime.now();
       final targetDate = today.add(const Duration(days: 2));
-      // Only date part, formatted as yyyy-MM-dd
+      
       final dueDateStr = targetDate.toIso8601String().substring(0, 10);
 
       print('Fetching tasks with due_date = $dueDateStr');

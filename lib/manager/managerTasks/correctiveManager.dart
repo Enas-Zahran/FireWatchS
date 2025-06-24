@@ -140,7 +140,7 @@ class _CorrectiveTasksPageState extends State<CorrectiveTasksPage> {
 
     setState(() => _isLoading = true);
     try {
-      // Get all tools at once
+     
       final toolNames = selectedReportIds.map((reportId) {
         return reports.firstWhere((r) => r['id'] == reportId)['tool'];
       }).toList();
@@ -164,7 +164,7 @@ class _CorrectiveTasksPageState extends State<CorrectiveTasksPage> {
         };
       }).toList();
 
-      // Insert all tasks in one batch
+
       await supabase.from('corrective_tasks').insert(tasks);
 
       ScaffoldMessenger.of(context).showSnackBar(
