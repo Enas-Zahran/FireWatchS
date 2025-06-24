@@ -34,13 +34,16 @@ class _LocationsPageState extends State<LocationsPage> {
   Future<void> _deleteLocation(String id) async {
     final confirm = await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('تأكيد الحذف'),
-        content: const Text('هل أنت متأكد من حذف هذا المكان؟'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
-        ],
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('تأكيد الحذف'),
+          content: const Text('هل أنت متأكد من حذف هذا المكان؟'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+          ],
+        ),
       ),
     );
 
@@ -70,7 +73,7 @@ class _LocationsPageState extends State<LocationsPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('لوحة تحكم الاماكن', style: TextStyle(color: Colors.white)),
+          title: Center(child: const Text('لوحة تحكم الاماكن', style: TextStyle(color: Colors.white))),
           backgroundColor: const Color(0xff00408b),
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [

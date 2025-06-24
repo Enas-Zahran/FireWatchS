@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:FireWatch/My/customFields.dart';
 
 class AddCorrectiveTaskTechnicianPage extends StatefulWidget {
   static const String routeName = 'addCorrectiveTaskTechnicianPage';
@@ -8,10 +8,12 @@ class AddCorrectiveTaskTechnicianPage extends StatefulWidget {
   const AddCorrectiveTaskTechnicianPage({super.key});
 
   @override
-  State<AddCorrectiveTaskTechnicianPage> createState() => _AddCorrectiveTaskTechnicianPageState();
+  State<AddCorrectiveTaskTechnicianPage> createState() =>
+      _AddCorrectiveTaskTechnicianPageState();
 }
 
-class _AddCorrectiveTaskTechnicianPageState extends State<AddCorrectiveTaskTechnicianPage> {
+class _AddCorrectiveTaskTechnicianPageState
+    extends State<AddCorrectiveTaskTechnicianPage> {
   final supabase = Supabase.instance.client;
 
   final _problemController = TextEditingController();
@@ -64,13 +66,15 @@ class _AddCorrectiveTaskTechnicianPageState extends State<AddCorrectiveTaskTechn
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تمت إضافة المهمة العلاجية وبانتظار موافقة المدير')),
+        const SnackBar(
+          content: Text('تمت إضافة المهمة العلاجية وبانتظار موافقة المدير'),
+        ),
       );
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('حدث خطأ: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('حدث خطأ: $e')));
     } finally {
       setState(() => isLoading = false);
     }
@@ -83,7 +87,10 @@ class _AddCorrectiveTaskTechnicianPageState extends State<AddCorrectiveTaskTechn
       child: Scaffold(
         appBar: AppBar(
           title: const Center(
-            child: Text('اضافة مهمة علاجية', style: TextStyle(color: Colors.white)),
+            child: Text(
+              'اضافة مهمة علاجية',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
           backgroundColor: const Color(0xff00408b),
           leading: IconButton(
@@ -97,13 +104,29 @@ class _AddCorrectiveTaskTechnicianPageState extends State<AddCorrectiveTaskTechn
             padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
             child: ListView(
               children: [
-                _buildToolSearchField(),
+                buildToolSearchField(
+                  toolNames: toolNames,
+                  controller: _toolController,
+                  onSelected: (suggestion) {
+                    _toolController.text = suggestion;
+                    selectedToolName = suggestion;
+                  },
+                ),
                 const SizedBox(height: 16),
-                _buildField('الخلل الذي وجد *', _problemController),
+                buildCustomField(
+                  label: 'الخلل الذي وجد *',
+                  controller: _problemController,
+                ),
                 const SizedBox(height: 16),
-                _buildField('من أخبر عنه (اختياري)', _informerController),
+                buildCustomField(
+                  label: 'من أخبر عنه (اختياري)',
+                  controller: _informerController,
+                ),
                 const SizedBox(height: 16),
-                _buildField('الإجراء المتخذ *', _actionController),
+                buildCustomField(
+                  label: 'الإجراء المتخذ *',
+                  controller: _actionController,
+                ),
                 const SizedBox(height: 24),
                 Align(
                   alignment: Alignment.center,
@@ -111,72 +134,15 @@ class _AddCorrectiveTaskTechnicianPageState extends State<AddCorrectiveTaskTechn
                     width: 400,
                     child: ElevatedButton(
                       onPressed: isLoading ? null : _submit,
-                      child: isLoading
-                          ? const CircularProgressIndicator()
-                          : const Text('إرسال للموافقة'),
+                      child:
+                          isLoading
+                              ? const CircularProgressIndicator()
+                              : const Text('إرسال للموافقة'),
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildField(String label, TextEditingController controller) {
-    return Align(
-      alignment: Alignment.center,
-      child: Container(
-        width: 400,
-        child: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: label,
-            border: const OutlineInputBorder(),
-          ),
-          textDirection: TextDirection.rtl,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildToolSearchField() {
-    return Align(
-      alignment: Alignment.center,
-      child: Container(
-        width: 400,
-        child: TypeAheadField<String>(
-          suggestionsCallback: (pattern) {
-            return toolNames
-                .where((name) =>
-                    name.toLowerCase().contains(pattern.toLowerCase()))
-                .toList();
-          },
-          builder: (context, controller, focusNode) {
-            _toolController.text = controller.text;
-            return TextField(
-              controller: controller,
-              focusNode: focusNode,
-              textDirection: TextDirection.rtl,
-              decoration: const InputDecoration(
-                labelText: 'اسم أداة السلامة',
-                border: OutlineInputBorder(),
-              ),
-            );
-          },
-          itemBuilder: (context, String suggestion) {
-            return ListTile(
-              title: Text(suggestion, textDirection: TextDirection.rtl),
-            );
-          },
-          onSelected: (String suggestion) {
-            _toolController.text = suggestion;
-            selectedToolName = suggestion;
-          },
-          emptyBuilder: (context) => const ListTile(
-            title: Text('لم يتم العثور على نتائج'),
           ),
         ),
       ),

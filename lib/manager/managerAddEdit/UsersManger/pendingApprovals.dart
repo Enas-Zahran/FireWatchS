@@ -64,9 +64,11 @@ class _PendingApprovalsPageState extends State<PendingApprovalsPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'عرض جميع الطلبات',
-            style: TextStyle(color: Colors.white),
+          title: Center(
+            child: const Text(
+              'عرض جميع الطلبات',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
           backgroundColor: const Color(0xff00408b),
           iconTheme: const IconThemeData(color: Colors.white),

@@ -58,7 +58,7 @@ class _EditLocationPageState extends State<EditLocationPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('تعديل ${widget.location['name']}', style: const TextStyle(color: Colors.white)),
+          title: Center(child: Text('تعديل ${widget.location['name']}', style: const TextStyle(color: Colors.white))),
           backgroundColor: const Color(0xff00408b),
           iconTheme: const IconThemeData(color: Colors.white),
         ),

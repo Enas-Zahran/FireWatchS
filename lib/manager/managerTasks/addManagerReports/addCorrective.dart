@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:FireWatch/My/InputDecoration.dart';
+import 'package:FireWatch/My/customFields.dart';
 
 class AddCorrectiveTaskManagerPage extends StatefulWidget {
   static const String routeName = 'addCorrectiveTaskManagerPage';
@@ -100,13 +100,30 @@ class _AddCorrectiveTaskManagerPageState
             padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
             child: ListView(
               children: [
-                _buildToolSearchField(),
+buildToolSearchField(
+  toolNames: toolNames,
+  controller: _toolController,
+  onSelected: (suggestion) {
+    _toolController.text = suggestion;
+    selectedToolName = suggestion;
+  },
+),
+
                 const SizedBox(height: 16),
-                _buildField('الخلل الذي وجد *', _problemController),
+                buildCustomField(
+                  label: 'الخلل الذي وجد *',
+                  controller: _problemController,
+                ),
                 const SizedBox(height: 16),
-                _buildField('من أخبر عنه (اختياري)', _informerController),
+                buildCustomField(
+                  label: 'من أخبر عنه (اختياري)',
+                  controller: _informerController,
+                ),
                 const SizedBox(height: 16),
-                _buildField('الإجراء المتخذ *', _actionController),
+                buildCustomField(
+                  label: 'الإجراء المتخذ *',
+                  controller: _actionController,
+                ),
                 const SizedBox(height: 24),
                 Align(
                   alignment: Alignment.center,
@@ -124,65 +141,6 @@ class _AddCorrectiveTaskManagerPageState
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildField(String label, TextEditingController controller) {
-    return Align(
-      alignment: Alignment.center,
-      child: Container(
-        width: 400,
-        child: TextField(
-          controller: controller,
-          decoration: customInputDecoration.copyWith(
-            labelText: label,
-            hintText: 'أدخل $label',
-          ),
-          textDirection: TextDirection.rtl,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildToolSearchField() {
-    return Align(
-      alignment: Alignment.center,
-      child: Container(
-        width: 400,
-        child: TypeAheadField<String>(
-          suggestionsCallback: (pattern) {
-            return toolNames
-                .where(
-                  (name) => name.toLowerCase().contains(pattern.toLowerCase()),
-                )
-                .toList();
-          },
-          builder: (context, controller, focusNode) {
-            _toolController.text = controller.text;
-            return TextField(
-              controller: controller,
-              focusNode: focusNode,
-              textDirection: TextDirection.rtl,
-              decoration: customInputDecoration.copyWith(
-                labelText: 'اسم أداة السلامة',
-                hintText: 'أدخل اسم الأداة',
-              ),
-            );
-          },
-          itemBuilder: (context, String suggestion) {
-            return ListTile(
-              title: Text(suggestion, textDirection: TextDirection.rtl),
-            );
-          },
-          onSelected: (String suggestion) {
-            _toolController.text = suggestion;
-            selectedToolName = suggestion;
-          },
-          emptyBuilder:
-              (context) =>
-                  const ListTile(title: Text('لم يتم العثور على نتائج')),
         ),
       ),
     );

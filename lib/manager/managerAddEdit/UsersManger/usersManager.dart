@@ -268,7 +268,7 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
                   padding: const EdgeInsets.all(16),
                   child:
                       filteredUsers.isEmpty
-                          ? const Text('لا يوجد مستخدمون')
+                          ? Center(child: const Text('لا يوجد مستخدمون'))
                           : ListView.builder(
                             itemCount: filteredUsers.length,
                             itemBuilder: (context, index) {

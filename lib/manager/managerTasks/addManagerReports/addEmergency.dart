@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:FireWatch/My/InputDecoration.dart';
+import 'package:FireWatch/My/customFields.dart';
 
 class AddEmergencyTaskManagerPage extends StatefulWidget {
   static const routeName = 'addEmergencyTaskManagerPage';
@@ -99,13 +98,30 @@ class _AddEmergencyTaskManagerPageState
             padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
             child: ListView(
               children: [
-                _buildToolSearchField(),
+                buildToolSearchField(
+                  toolNames: toolNames,
+                  controller: _toolController,
+                  onSelected: (suggestion) {
+                    _toolController.text = suggestion;
+                    selectedToolName = suggestion;
+                  },
+                ),
+
                 const SizedBox(height: 16),
-                _buildField('المساحة التي تمت تغطيتها', _areaController),
+                buildCustomField(
+                  label: 'المساحة التي تمت تغطيتها',
+                  controller: _areaController,
+                ),
                 const SizedBox(height: 16),
-                _buildField('سبب الاستخدام', _reasonController),
+                buildCustomField(
+                  label: 'سبب الاستخدام',
+                  controller: _reasonController,
+                ),
                 const SizedBox(height: 16),
-                _buildField('الإجراء المتخذ', _actionController),
+                buildCustomField(
+                  label: 'الإجراء المتخذ',
+                  controller: _actionController,
+                ),
                 const SizedBox(height: 24),
                 Container(
                   width: 400,
@@ -125,62 +141,59 @@ class _AddEmergencyTaskManagerPageState
     );
   }
 
-  Widget _buildField(String label, TextEditingController controller) {
-    return Align(
-      alignment: Alignment.center,
-      child: Container(
-        width: 400,
-        child: TextField(
-          controller: controller,
-          decoration: customInputDecoration.copyWith(
-            labelText: label,
-            hintText: 'أدخل $label',
-          ),
-          textDirection: TextDirection.rtl,
-        ),
-      ),
-    );
-  }
+  //   Widget _buildField(String label, TextEditingController controller) {
+  //   return Align(
+  //     alignment: Alignment.center,
+  //     child: Container(
+  //       width: 400,
+  //       child: TextField(
+  //         controller: controller,
+  //         decoration: customInputDecoration.copyWith(
+  //           labelText: label,
+  //           hintText: 'أدخل $label',
+  //         ),
+  //         textDirection: TextDirection.rtl,
+  //       ),
+  //     ),
+  //   );
+  // }
 
-  Widget _buildToolSearchField() {
-    return Align(
-      alignment: Alignment.center,
-      child: Container(
-        width: 400,
-        child: TypeAheadField<String>(
-          suggestionsCallback: (pattern) {
-            return toolNames
-                .where(
-                  (name) => name.toLowerCase().contains(pattern.toLowerCase()),
-                )
-                .toList();
-          },
-          builder: (context, controller, focusNode) {
-            _toolController.text = controller.text;
-            return TextField(
-              controller: controller,
-              focusNode: focusNode,
-              textDirection: TextDirection.rtl,
-              decoration: customInputDecoration.copyWith(
-                labelText: 'رمز أداة السلامة',
-                hintText: 'أدخل رمز الأداة',
-              ),
-            );
-          },
-          itemBuilder: (context, String suggestion) {
-            return ListTile(
-              title: Text(suggestion, textDirection: TextDirection.rtl),
-            );
-          },
-          onSelected: (String suggestion) {
-            _toolController.text = suggestion;
-            selectedToolName = suggestion;
-          },
-          emptyBuilder:
-              (context) =>
-                  const ListTile(title: Text('لم يتم العثور على نتائج')),
-        ),
-      ),
-    );
-  }
+  // Widget _buildToolSearchField() {
+  //   return Align(
+  //     alignment: Alignment.center,
+  //     child: Container(
+  //       width: 400,
+  //       child: TypeAheadField<String>(
+  //         suggestionsCallback: (pattern) {
+  //           return toolNames
+  //               .where((name) => name.toLowerCase().contains(pattern.toLowerCase()))
+  //               .toList();
+  //         },
+  //         builder: (context, controller, focusNode) {
+  //           _toolController.text = controller.text;
+  //           return TextField(
+  //             controller: controller,
+  //             focusNode: focusNode,
+  //             textDirection: TextDirection.rtl,
+  //             decoration: customInputDecoration.copyWith(
+  //               labelText: 'رمز أداة السلامة',
+  //               hintText: 'أدخل رمز الأداة',
+  //             ),
+  //           );
+  //         },
+  //         itemBuilder: (context, String suggestion) {
+  //           return ListTile(
+  //             title: Text(suggestion, textDirection: TextDirection.rtl),
+  //           );
+  //         },
+  //         onSelected: (String suggestion) {
+  //           _toolController.text = suggestion;
+  //           selectedToolName = suggestion;
+  //         },
+  //         emptyBuilder: (context) =>
+  //             const ListTile(title: Text('لم يتم العثور على نتائج')),
+  //       ),
+  //     ),
+  //   );
+  // }
 }

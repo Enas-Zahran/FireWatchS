@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:signature/signature.dart';
 import 'package:intl/intl.dart';
 import 'package:FireWatch/technician/MaterialExit.dart';
+
 class FireExtinguisherCorrectiveEmergency extends StatefulWidget {
   final String taskId;
   final String toolName;
@@ -16,19 +17,26 @@ class FireExtinguisherCorrectiveEmergency extends StatefulWidget {
   });
 
   @override
-  State<FireExtinguisherCorrectiveEmergency> createState() => _FireExtinguisherCorrectiveEmergencyState();
+  State<FireExtinguisherCorrectiveEmergency> createState() =>
+      _FireExtinguisherCorrectiveEmergencyState();
 }
 
-class _FireExtinguisherCorrectiveEmergencyState extends State<FireExtinguisherCorrectiveEmergency> {
+class _FireExtinguisherCorrectiveEmergencyState
+    extends State<FireExtinguisherCorrectiveEmergency> {
   final supabase = Supabase.instance.client;
   DateTime? currentDate;
   DateTime? nextDate;
   Map<String, bool> checks = {};
   Map<String, TextEditingController> notes = {};
-  final SignatureController technicianSignature = SignatureController(penStrokeWidth: 2);
-  final SignatureController companySignature = SignatureController(penStrokeWidth: 2);
+  final SignatureController technicianSignature = SignatureController(
+    penStrokeWidth: 2,
+  );
+  final SignatureController companySignature = SignatureController(
+    penStrokeWidth: 2,
+  );
   final _formKey = GlobalKey<FormState>();
   final TextEditingController companyRep = TextEditingController();
+  final TextEditingController otherNotesController = TextEditingController();
   String? companyName;
   String? technicianName;
 
@@ -41,7 +49,7 @@ class _FireExtinguisherCorrectiveEmergencyState extends State<FireExtinguisherCo
     'تفقد ساعة الضغط',
     'تفقد قاذف الطفاية',
     'تفقد مسمار الأمان',
-    'وزن الطفاية'
+    'وزن الطفاية',
   ];
 
   @override
@@ -58,19 +66,31 @@ class _FireExtinguisherCorrectiveEmergencyState extends State<FireExtinguisherCo
   Future<void> _fetchTechnician() async {
     final user = supabase.auth.currentUser;
     if (user != null) {
-      final data = await supabase.from('users').select('name').eq('id', user.id).maybeSingle();
+      final data =
+          await supabase
+              .from('users')
+              .select('name')
+              .eq('id', user.id)
+              .maybeSingle();
       setState(() => technicianName = data?['name']);
     }
   }
 
   Future<void> _fetchCompany() async {
     final currentYear = DateTime.now().year;
-    final data = await supabase
-        .from('contract_companies')
-        .select('company_name')
-        .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
-        .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
-        .maybeSingle();
+    final data =
+        await supabase
+            .from('contract_companies')
+            .select('company_name')
+            .gte(
+              'contract_start_date',
+              DateTime(currentYear, 1, 1).toIso8601String(),
+            )
+            .lte(
+              'contract_start_date',
+              DateTime(currentYear, 12, 31).toIso8601String(),
+            )
+            .maybeSingle();
     setState(() => companyName = data?['company_name']);
   }
 
@@ -90,65 +110,99 @@ class _FireExtinguisherCorrectiveEmergencyState extends State<FireExtinguisherCo
     }
   }
 
- Future<void> _submitReport() async {
-  if (!_formKey.currentState!.validate() || currentDate == null || technicianSignature.isEmpty || companySignature.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')));
-    return;
-  }
+  Future<void> _submitReport() async {
+    if (!_formKey.currentState!.validate() ||
+        currentDate == null ||
+        technicianSignature.isEmpty ||
+        companySignature.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
+      );
+      return;
+    }
 
-  final writtenNotes = notes.entries
-    .where((e) => e.value.text.trim().isNotEmpty)
-    .map((e) => {
-      'toolName': widget.toolName,
-      'note': e.value.text.trim(),
-    }).toList();
+    final writtenNotes =
+        notes.entries
+            .where((e) => e.value.text.trim().isNotEmpty)
+            .map(
+              (e) => {'toolName': widget.toolName, 'note': e.value.text.trim()},
+            )
+            .toList();
 
-  // 1. Save report
-  await supabase.from('fire_extinguisher_correctiveEmergency').insert({
-    'task_id': widget.taskId,
-    'task_type': widget.taskType,
-    'tool_name': widget.toolName,
-    'inspection_date': currentDate!.toIso8601String(),
-    'next_inspection_date': nextDate!.toIso8601String(),
-    'company_name': companyName,
-    'company_rep': companyRep.text.trim(),
-    'technician_name': technicianName,
-    'steps': steps.map((s) => {
-      'step': s,
-      'checked': checks[s],
-      'note': notes[s]!.text.trim(),
-    }).toList(),
-    'technician_signed': true,
-    'company_signed': true,
-  });
+    if (otherNotesController.text.trim().isNotEmpty) {
+      writtenNotes.add({
+        'toolName': widget.toolName,
+        'note': 'أخرى: ${otherNotesController.text.trim()}',
+      });
+    }
 
-  // 2. Update task status
-  final taskTable = widget.taskType == 'طارئ' ? 'emergency_tasks' : 'corrective_tasks';
-  await supabase.from(taskTable).update({'status': 'done'}).eq('id', widget.taskId);
+    await supabase.from('fire_extinguisher_correctiveEmergency').insert({
+      'task_id': widget.taskId,
+      'task_type': widget.taskType,
+      'tool_name': widget.toolName,
+      'inspection_date': currentDate!.toIso8601String(),
+      'next_inspection_date': nextDate!.toIso8601String(),
+      'company_name': companyName,
+      'company_rep': companyRep.text.trim(),
+      'technician_name': technicianName,
+      'steps':
+          steps
+              .map(
+                (s) => {
+                  'step': s,
+                  'checked': checks[s],
+                  'note': notes[s]!.text.trim(),
+                },
+              )
+              .toList(),
+      'other_notes': otherNotesController.text.trim(),
+      'technician_signed': true,
+      'company_signed': true,
+    });
 
-  // 3. Update next maintenance date
-  await supabase.from('safety_tools')
-      .update({'next_maintenance_date': nextDate!.toIso8601String()})
-      .eq('name', widget.toolName);
+    final taskTable =
+        widget.taskType == 'طارئ' ? 'emergency_tasks' : 'corrective_tasks';
+    await supabase
+        .from(taskTable)
+        .update({'status': 'done'})
+        .eq('id', widget.taskId);
 
-  // 4. Navigate to export request page if there are notes
-  if (writtenNotes.isNotEmpty && context.mounted) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => MaterialExitAuthorizationPage(
-          materials: writtenNotes,
-          technicianName: technicianName ?? '',
+    await supabase
+        .from('safety_tools')
+        .update({'next_maintenance_date': nextDate!.toIso8601String()})
+        .eq('name', widget.toolName);
+
+    if (writtenNotes.isNotEmpty && context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (_) => MaterialExitAuthorizationPage(
+                materials: writtenNotes,
+                technicianName: technicianName ?? '',
+              ),
         ),
-      ),
-    );
-  } else {
-    if (!context.mounted) return;
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير')));
+      );
+    } else {
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير')));
+    }
   }
-}
 
+  @override
+  void dispose() {
+    for (var controller in notes.values) {
+      controller.dispose();
+    }
+    otherNotesController.dispose();
+    companyRep.dispose();
+    technicianSignature.dispose();
+    companySignature.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +210,10 @@ class _FireExtinguisherCorrectiveEmergencyState extends State<FireExtinguisherCo
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('تقرير فحص طفاية حريق', style: TextStyle(color: Colors.white)),
+          title: const Text(
+            'تقرير فحص طفاية حريق',
+            style: TextStyle(color: Colors.white),
+          ),
           centerTitle: true,
           backgroundColor: const Color(0xff00408b),
           leading: IconButton(
@@ -164,17 +221,26 @@ class _FireExtinguisherCorrectiveEmergencyState extends State<FireExtinguisherCo
             onPressed: () {
               showDialog(
                 context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('تأكيد الخروج'),
-                  content: const Text('هل أنت متأكد من رغبتك في مغادرة التقرير؟'),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('لا')),
-                    TextButton(onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.pop(context);
-                    }, child: const Text('نعم')),
-                  ],
-                ),
+                builder:
+                    (context) => AlertDialog(
+                      title: const Text('تأكيد الخروج'),
+                      content: const Text(
+                        'هل أنت متأكد من رغبتك في مغادرة التقرير؟',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('لا'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pop(context);
+                          },
+                          child: const Text('نعم'),
+                        ),
+                      ],
+                    ),
               );
             },
           ),
@@ -187,13 +253,18 @@ class _FireExtinguisherCorrectiveEmergencyState extends State<FireExtinguisherCo
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 2,
                   child: ListTile(
                     title: Text('الأداة: ${widget.toolName}'),
-                    subtitle: currentDate != null
-                        ? Text('تاريخ الفحص: ${DateFormat.yMd().format(currentDate!)}\nتاريخ الفحص القادم: ${DateFormat.yMd().format(nextDate!)}')
-                        : const Text('لم يتم اختيار تاريخ'),
+                    subtitle:
+                        currentDate != null
+                            ? Text(
+                              'تاريخ الفحص: ${DateFormat.yMd().format(currentDate!)}\nتاريخ الفحص القادم: ${DateFormat.yMd().format(nextDate!)}',
+                            )
+                            : const Text('لم يتم اختيار تاريخ'),
                     trailing: IconButton(
                       icon: const Icon(Icons.calendar_today),
                       onPressed: _pickDate,
@@ -201,37 +272,83 @@ class _FireExtinguisherCorrectiveEmergencyState extends State<FireExtinguisherCo
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('الإجراءات:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'الإجراءات:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
-                ...steps.map((step) => Card(
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: Row(
-                      children: [
-                        Checkbox(value: checks[step], onChanged: (v) => setState(() => checks[step] = v!)),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(step, textAlign: TextAlign.right)),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.edit_note),
-                          onPressed: () => showDialog(
-                            context: context,
-                            builder: (_) => AlertDialog( 
-                              title: Text('ملاحظات لـ $step'),
-                              content: TextFormField(controller: notes[step], maxLines: 4, textAlign: TextAlign.right),
-                              actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('تم'))],
-                            ),
+                ...steps.map(
+                  (step) => Card(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: checks[step],
+                            onChanged: (v) => setState(() => checks[step] = v!),
                           ),
-                        )
-                      ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(step, textAlign: TextAlign.right),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.edit_note),
+                            onPressed:
+                                () => showDialog(
+                                  context: context,
+                                  builder:
+                                      (_) => AlertDialog(
+                                        title: Text('ملاحظات لـ $step'),
+                                        content: TextFormField(
+                                          controller: notes[step],
+                                          maxLines: 4,
+                                          textAlign: TextAlign.right,
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed:
+                                                () => Navigator.pop(context),
+                                            child: const Text('تم'),
+                                          ),
+                                        ],
+                                      ),
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                )),
+                ),
                 const SizedBox(height: 16),
+                const SizedBox(height: 16),
+                Text(
+                  'ملاحظات أخرى إن وجدت:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: otherNotesController,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    hintText: 'أدخل ملاحظات إضافية...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+
                 Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 2,
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -241,19 +358,27 @@ class _FireExtinguisherCorrectiveEmergencyState extends State<FireExtinguisherCo
                         Text('اسم الشركة المنفذة: ${companyName ?? '...'}'),
                         TextFormField(
                           controller: companyRep,
-                          decoration: const InputDecoration(labelText: 'اسم مندوب الشركة'),
+                          decoration: const InputDecoration(
+                            labelText: 'اسم مندوب الشركة',
+                          ),
                           validator: (v) => v!.isEmpty ? 'مطلوب' : null,
                         ),
                         const SizedBox(height: 12),
                         const Text('توقيع مندوب الشركة:'),
-                        Signature(controller: companySignature, height: 100, backgroundColor: Colors.grey[200]!),
+                        Signature(
+                          controller: companySignature,
+                          height: 100,
+                          backgroundColor: Colors.grey[200]!,
+                        ),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 2,
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -262,7 +387,11 @@ class _FireExtinguisherCorrectiveEmergencyState extends State<FireExtinguisherCo
                       children: [
                         Text('اسم الفني: ${technicianName ?? '...'}'),
                         const Text('توقيع الفني:'),
-                        Signature(controller: technicianSignature, height: 100, backgroundColor: Colors.grey[200]!),
+                        Signature(
+                          controller: technicianSignature,
+                          height: 100,
+                          backgroundColor: Colors.grey[200]!,
+                        ),
                       ],
                     ),
                   ),
@@ -276,11 +405,16 @@ class _FireExtinguisherCorrectiveEmergencyState extends State<FireExtinguisherCo
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xff00408b),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ),

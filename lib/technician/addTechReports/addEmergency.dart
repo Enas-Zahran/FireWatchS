@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:FireWatch/My/customFields.dart';
 
 class AddEmergencyTaskTechnicianPage extends StatefulWidget {
   static const routeName = 'addEmergencyTaskTechnicianPage';
@@ -65,7 +65,9 @@ class _AddEmergencyTaskTechnicianPageState
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إرسال المهمة الطارئة للمدير للموافقة')),
+        const SnackBar(
+          content: Text('تم إرسال المهمة الطارئة للمدير للموافقة'),
+        ),
       );
       Navigator.pop(context);
     } catch (e) {
@@ -98,85 +100,44 @@ class _AddEmergencyTaskTechnicianPageState
             padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
             child: ListView(
               children: [
-                _buildToolSearchField(),
+                buildToolSearchField(
+                  toolNames: toolNames,
+                  controller: _toolController,
+                  onSelected: (suggestion) {
+                    _toolController.text = suggestion;
+                    selectedToolName = suggestion;
+                  },
+                ),
+
                 const SizedBox(height: 16),
-                _buildField('المساحة التي تمت تغطيتها', _areaController),
+                buildCustomField(
+                  label: 'المساحة التي تمت تغطيتها',
+                  controller: _areaController,
+                ),
                 const SizedBox(height: 16),
-                _buildField('سبب الاستخدام', _reasonController),
+                buildCustomField(
+                  label: 'سبب الاستخدام',
+                  controller: _reasonController,
+                ),
                 const SizedBox(height: 16),
-                _buildField('الإجراء المتخذ', _actionController),
+                buildCustomField(
+                  label: 'الإجراء المتخذ',
+                  controller: _actionController,
+                ),
                 const SizedBox(height: 24),
                 Container(
                   width: 400,
                   child: ElevatedButton(
                     onPressed: isLoading ? null : _submit,
-                    child: isLoading
-                        ? const CircularProgressIndicator()
-                        : const Text('إرسال للموافقة'),
+                    child:
+                        isLoading
+                            ? const CircularProgressIndicator()
+                            : const Text('إرسال للموافقة'),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildField(String label, TextEditingController controller) {
-    return Align(
-      alignment: Alignment.center,
-      child: Container(
-        width: 400,
-        child: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: label,
-            border: const OutlineInputBorder(),
-          ),
-          textDirection: TextDirection.rtl,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildToolSearchField() {
-    return Align(
-      alignment: Alignment.center,
-      child: Container(
-        width: 400,
-        child: TypeAheadField<String>(
-          suggestionsCallback: (pattern) {
-            return toolNames
-                .where(
-                  (name) => name.toLowerCase().contains(pattern.toLowerCase()),
-                )
-                .toList();
-          },
-          builder: (context, controller, focusNode) {
-            _toolController.text = controller.text; // keep controller updated
-            return TextField(
-              controller: controller,
-              focusNode: focusNode,
-              textDirection: TextDirection.rtl,
-              decoration: const InputDecoration(
-                labelText: 'رمز أداة السلامة',
-                border: OutlineInputBorder(),
-              ),
-            );
-          },
-          itemBuilder: (context, String suggestion) {
-            return ListTile(
-              title: Text(suggestion, textDirection: TextDirection.rtl),
-            );
-          },
-          onSelected: (String suggestion) {
-            _toolController.text = suggestion;
-            selectedToolName = suggestion;
-          },
-          emptyBuilder:
-              (context) =>
-                  const ListTile(title: Text('لم يتم العثور على نتائج')),
         ),
       ),
     );

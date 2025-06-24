@@ -6,6 +6,7 @@ import 'package:FireWatch/technician/addTechReports/addEmergency.dart';
 import 'package:FireWatch/technician/addTechReports/addCorrective.dart';
 import 'package:FireWatch/technician/TechnichanPeriodic/Locations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 class TechnicianDashboardPage extends StatelessWidget {
   static const String routeName = 'technicianTasksMainPage';
 
@@ -14,37 +15,38 @@ class TechnicianDashboardPage extends StatelessWidget {
   void _showAddOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      builder: (context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.warning),
-            title: const Text('اضافة طارئ'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AddEmergencyTaskTechnicianPage(),
-                ),
-              );
-            },
+      builder:
+          (context) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.warning),
+                title: const Text('اضافة طارئ'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddEmergencyTaskTechnicianPage(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.build),
+                title: const Text('اضافة علاجي'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddCorrectiveTaskTechnicianPage(),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.build),
-            title: const Text('اضافة علاجي'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AddCorrectiveTaskTechnicianPage(),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
     );
   }
 
@@ -63,48 +65,54 @@ class TechnicianDashboardPage extends StatelessWidget {
               icon: const Icon(Icons.add, color: Colors.white),
               onPressed: () => _showAddOptions(context),
             ),
-           IconButton(
-        icon: const Icon(Icons.notifications, color: Colors.white),
-        onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const TechnicianNotificationsPage(),
-        ),
-      );
-        },
-      ),
-      
-          ],
-       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('تأكيد تسجيل الخروج'),
-          content: const Text('سيتم تسجيل خروجك من الحساب. هل أنت متأكد؟'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('لا'),
-            ),
-            TextButton(
-              onPressed: () async {
-                await Supabase.instance.client.auth.signOut();
-                if (context.mounted) {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Go back (or navigate to login)
-                }
+            IconButton(
+              icon: const Icon(Icons.notifications, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TechnicianNotificationsPage(),
+                  ),
+                );
               },
-              child: const Text('نعم'),
             ),
           ],
-        ),
-      );
-        },
-      ),
-      
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder:
+                    (context) => Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: AlertDialog(
+                        title: const Text('تأكيد تسجيل الخروج'),
+                        content: const Text(
+                          'سيتم تسجيل خروجك من الحساب. هل أنت متأكد؟',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('لا'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              await Supabase.instance.client.auth.signOut();
+                              if (context.mounted) {
+                                Navigator.pop(context); // Close dialog
+                                Navigator.pop(
+                                  context,
+                                ); // Go back (or navigate to login)
+                              }
+                            },
+                            child: const Text('نعم'),
+                          ),
+                        ],
+                      ),
+                    ),
+              );
+            },
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(30, 50, 30, 30),
