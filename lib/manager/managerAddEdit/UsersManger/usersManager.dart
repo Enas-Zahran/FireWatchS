@@ -1,8 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:FireWatch/manager/managerAddEdit/UsersManger/pendingApprovals.dart';
 import 'package:FireWatch/manager/managerAddEdit/UsersManger/editUser.dart';
-
+//Todo material type filter and tool type isn't working correctly
 class ManagerUserListPage extends StatefulWidget {
   static const String routeName = 'managerUserList';
 
@@ -65,6 +67,27 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
     setState(() {});
   }
 
+  bool containsAny(dynamic rawValue, List<String> selected) {
+    if (rawValue == null || rawValue.toString().trim().isEmpty) return false;
+    try {
+      final decoded = jsonDecode(rawValue.toString());
+      if (decoded is List) {
+        final values = decoded.map((e) => e.toString().trim()).toList();
+        return selected.any((item) => values.contains(item));
+      } else if (decoded is String) {
+        return selected.contains(decoded.trim());
+      }
+    } catch (_) {
+      final value = rawValue.toString().replaceAll('"', '').trim();
+      if (value.contains(',')) {
+        final parts = value.split(',').map((e) => e.trim()).toList();
+        return selected.any((item) => parts.contains(item));
+      }
+      return selected.contains(value);
+    }
+    return false;
+  }
+
   void _applyFilters() {
     final searchName = _searchController.text.trim();
     filteredUsers =
@@ -83,13 +106,16 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
 
           final matchesTool =
               selectedToolTypes.isEmpty ||
-              selectedToolTypes.contains(user['tool_type']?.toString());
+              containsAny(user['tool_type'], selectedToolTypes);
+
           final matchesMaterial =
               selectedMaterialTypes.isEmpty ||
-              selectedMaterialTypes.contains(user['material_type']?.toString());
+              containsAny(user['material_type'], selectedMaterialTypes);
+
           final matchesWorkPlace =
               selectedWorkPlaces.isEmpty ||
-              selectedWorkPlaces.contains(user['work_place']?.toString());
+              containsAny(user['work_place'], selectedWorkPlaces);
+
           final matchesName =
               searchName.isEmpty ||
               (user['name']?.toString().toLowerCase().contains(
@@ -105,9 +131,34 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
         }).toList();
   }
 
-  // void _openFilterDrawer() {
-  //   Scaffold.of(context).openEndDrawer();
-  // }
+  Widget _buildCheckboxList(
+    String title,
+    List<String> options,
+    List<String> selectedItems,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ...options.map(
+          (item) => CheckboxListTile(
+            value: selectedItems.contains(item),
+            title: Text(item),
+            onChanged: (val) {
+              setState(() {
+                if (val == true) {
+                  selectedItems.add(item);
+                } else {
+                  selectedItems.remove(item);
+                }
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +171,6 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
             style: TextStyle(color: Colors.white),
           ),
           backgroundColor: const Color(0xff00408b),
-
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             IconButton(
@@ -171,7 +221,6 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
                 );
               },
             ),
-
             Builder(
               builder:
                   (context) => IconButton(
@@ -179,7 +228,6 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
                     onPressed: () => Scaffold.of(context).openEndDrawer(),
                   ),
             ),
-
             IconButton(
               icon: Stack(
                 clipBehavior: Clip.none,
@@ -211,7 +259,6 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
             ),
           ],
         ),
-
         endDrawer: Drawer(
           child: SafeArea(
             child: ListView(
@@ -253,7 +300,7 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
                       selectedWorkPlaces.clear();
                       _applyFilters();
                     });
-                    Navigator.pop(context);
+                    
                   },
                   child: const Text('إعادة تعيين'),
                 ),
@@ -268,7 +315,7 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
                   padding: const EdgeInsets.all(16),
                   child:
                       filteredUsers.isEmpty
-                          ? Center(child: const Text('لا يوجد مستخدمون'))
+                          ? const Center(child: Text('لا يوجد مستخدمون'))
                           : ListView.builder(
                             itemCount: filteredUsers.length,
                             itemBuilder: (context, index) {
@@ -363,35 +410,6 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
                           ),
                 ),
       ),
-    );
-  }
-
-  Widget _buildCheckboxList(
-    String title,
-    List<String> options,
-    List<String> selectedItems,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 16),
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        ...options.map(
-          (item) => CheckboxListTile(
-            value: selectedItems.contains(item),
-            title: Text(item),
-            onChanged: (val) {
-              setState(() {
-                if (val == true) {
-                  selectedItems.add(item);
-                } else {
-                  selectedItems.remove(item);
-                }
-              });
-            },
-          ),
-        ),
-      ],
     );
   }
 }

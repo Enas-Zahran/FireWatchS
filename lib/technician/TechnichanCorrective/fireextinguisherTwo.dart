@@ -222,24 +222,27 @@ class _FireExtinguisherCorrectiveEmergencyState
               showDialog(
                 context: context,
                 builder:
-                    (context) => AlertDialog(
-                      title: const Text('تأكيد الخروج'),
-                      content: const Text(
-                        'هل أنت متأكد من رغبتك في مغادرة التقرير؟',
+                    (context) => Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: AlertDialog(
+                        title: const Text('تأكيد الخروج'),
+                        content: const Text(
+                          'هل أنت متأكد من رغبتك في مغادرة التقرير؟',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Navigator.pop(context);
+                            },
+                            child: const Text('نعم'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('لا'),
+                          ),
+                        ],
                       ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('لا'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Navigator.pop(context);
-                          },
-                          child: const Text('نعم'),
-                        ),
-                      ],
                     ),
               );
             },

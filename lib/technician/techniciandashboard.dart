@@ -91,11 +91,7 @@ class TechnicianDashboardPage extends StatelessWidget {
                           'سيتم تسجيل خروجك من الحساب. هل أنت متأكد؟',
                         ),
                         actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('لا'),
-                          ),
-                          TextButton(
+                              TextButton(
                             onPressed: () async {
                               await Supabase.instance.client.auth.signOut();
                               if (context.mounted) {
@@ -107,6 +103,11 @@ class TechnicianDashboardPage extends StatelessWidget {
                             },
                             child: const Text('نعم'),
                           ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('لا'),
+                          ),
+                      
                         ],
                       ),
                     ),

@@ -188,22 +188,26 @@ class _CorrectiveTasksPageState extends State<CorrectiveTasksPage> {
   void _showConfirmationDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('تأكيد الإسناد'),
-        content: const Text('هل أنت متأكد من اضافة هذه المهام لهذا المستخدم؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('لا'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _assignTasks();
-            },
-            child: const Text('نعم'),
-          )
-        ],
+      builder: (_) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('تأكيد الإسناد'),
+          content: const Text('هل أنت متأكد من اضافة هذه المهام لهذا المستخدم؟'),
+          actions: [
+              TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _assignTasks();
+              },
+              child: const Text('نعم'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('لا'),
+            ),
+          
+          ],
+        ),
       ),
     );
   }

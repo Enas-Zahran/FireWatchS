@@ -278,39 +278,43 @@ class _EmergencyTasksPageState extends State<EmergencyTasksPage> {
   void _showConfirmationDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('تأكيد الإسناد'),
-        content: const Text('هل أنت متأكد من اضافة هذه المهام لهذا المستخدم؟'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('لا')),
-          TextButton(
-            onPressed: () async {
-              for (final requestId in selectedRequestIds) {
-                final request = requests.firstWhere((r) => r['id'] == requestId);
-                final toolName = request['tool'];
-                final tool = await supabase
-                    .from('safety_tools')
-                    .select('id')
-                    .eq('name', toolName)
-                    .maybeSingle();
-                await supabase.from('emergency_tasks').insert({
-                  'request_id': requestId,
-                  'tool_id': tool != null ? tool['id'] : null,
-                  'assigned_to': selectedTechnicianId,
-                  'assigned_by': supabase.auth.currentUser!.id,
-                  'due_date': DateTime.now().add(const Duration(days: 6)).toIso8601String(),
-                });
-              }
-              Navigator.pop(context);
-              setState(() => selectedRequestIds.clear());
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إسناد المهام بنجاح')));
-              await _fetchTaskCounts();
-              _fetchTechnicians();
-              _fetchRequests();
-            },
-            child: const Text('نعم'),
-          )
-        ],
+      builder: (_) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('تأكيد الإسناد'),
+          content: const Text('هل أنت متأكد من اضافة هذه المهام لهذا المستخدم؟'),
+          actions: [
+          
+            TextButton(
+              onPressed: () async {
+                for (final requestId in selectedRequestIds) {
+                  final request = requests.firstWhere((r) => r['id'] == requestId);
+                  final toolName = request['tool'];
+                  final tool = await supabase
+                      .from('safety_tools')
+                      .select('id')
+                      .eq('name', toolName)
+                      .maybeSingle();
+                  await supabase.from('emergency_tasks').insert({
+                    'request_id': requestId,
+                    'tool_id': tool != null ? tool['id'] : null,
+                    'assigned_to': selectedTechnicianId,
+                    'assigned_by': supabase.auth.currentUser!.id,
+                    'due_date': DateTime.now().add(const Duration(days: 6)).toIso8601String(),
+                  });
+                }
+                Navigator.pop(context);
+                setState(() => selectedRequestIds.clear());
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إسناد المهام بنجاح')));
+                await _fetchTaskCounts();
+                _fetchTechnicians();
+                _fetchRequests();
+              },
+              child: const Text('نعم'),
+            ),
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('لا')),
+          ],
+        ),
       ),
     );
   }

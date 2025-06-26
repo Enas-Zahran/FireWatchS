@@ -140,17 +140,18 @@ setState(() => companyName = data?['company_name']);
                     title: const Text('تأكيد الخروج'),
                     content: const Text('هل أنت متأكد من رغبتك في مغادرة التقرير؟'),
                     actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('لا'),
-                      ),
-                      TextButton(
+                         TextButton(
                         onPressed: () {
                           Navigator.pop(context);
                           Navigator.pop(context);
                         },
                         child: const Text('نعم'),
                       ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('لا'),
+                      ),
+                   
                     ],
                   ),
                 ),
