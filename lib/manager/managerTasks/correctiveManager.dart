@@ -75,8 +75,9 @@ class _CorrectiveTasksPageState extends State<CorrectiveTasksPage> {
   Future<void> _fetchTechnicians() async {
     final response = await supabase
         .from('users')
-        .select('id, name')
-        .eq('role', 'فني السلامة العامة');
+        .select('id, name, is_approved') 
+        .eq('role', 'فني السلامة العامة')
+        .eq('is_approved', true);
 
     setState(() {
       technicians =
@@ -181,8 +182,7 @@ class _CorrectiveTasksPageState extends State<CorrectiveTasksPage> {
       for (final report in toolDetails) {
         final toolName = report['tool']?.toString();
 
-        if (toolName == null || toolName.isEmpty)
-          continue; // ✅ تخطي إذا null أو فارغ
+        if (toolName == null || toolName.isEmpty) continue;
 
         final matchingTool =
             await supabase

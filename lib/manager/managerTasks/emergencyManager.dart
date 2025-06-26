@@ -66,7 +66,8 @@ class _EmergencyTasksPageState extends State<EmergencyTasksPage> {
     final response = await supabase
         .from('users')
         .select('id, name')
-        .eq('role', 'فني السلامة العامة');
+        .eq('role', 'فني السلامة العامة')
+        .eq('is_approved', true);
 
     setState(() {
       technicians =
