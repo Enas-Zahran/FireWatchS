@@ -20,6 +20,21 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
   DateTime? _purchaseDate;
   double? _price;
 
+  List<String> locationCodes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocationCodes();
+  }
+
+  Future<void> _fetchLocationCodes() async {
+    final response = await Supabase.instance.client.from('locations').select('code');
+    setState(() {
+      locationCodes = List<String>.from(response.map((e) => e['code'].toString().toUpperCase()));
+    });
+  }
+
   final Map<String, List<String>> materialOptions = {
     'fire extinguisher': [
       'ثاني اكسيد الكربون',
@@ -36,36 +51,39 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
     'ثاني اكسيد الكربون': ['2 kg', '5 kg', '6 kg', '10 kg', '20 kg', '30 kg'],
     'البودرة الجافة': ['1 kg', '2 kg', '6 kg', '12 kg', '25 kg', '50 kg'],
     'الرغوة (B.C.F)': [
-      '1 L',
-      '2 L',
-      '3 L',
-      '4 L',
-      '6 L',
-      '9 L',
-      '25 L',
-      '50 L',
+      '1 L', '2 L', '3 L', '4 L', '6 L', '9 L', '25 L', '50 L',
     ],
     'الماء': ['1 L', '2 L', '3 L', '4 L', '6 L', '9 L', '25 L', '50 L'],
     'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي': [
-      '1 kg',
-      '2 kg',
-      '3 kg',
-      '4 kg',
-      '6 kg',
-      '9 kg',
-      '25 kg',
-      '50 kg',
+      '1 kg', '2 kg', '3 kg', '4 kg', '6 kg', '9 kg', '25 kg', '50 kg',
     ],
   };
 
+  String _capitalize(String input) {
+    if (input.isEmpty) return input;
+    return input[0].toUpperCase() + input.substring(1);
+  }
+
   Future<void> _addTool() async {
     if (!_formKey.currentState!.validate() || _purchaseDate == null) return;
-    final existing =
-        await Supabase.instance.client
-            .from('safety_tools')
-            .select('id')
-            .eq('name', _nameController.text.trim())
-            .maybeSingle();
+
+    final toolName = _nameController.text.trim();
+    final toolCode = toolName.isNotEmpty ? toolName[0].toUpperCase() : '';
+
+    if (!locationCodes.contains(toolCode)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ لا يوجد مكان لهذا الرمز، يرجى التأكد من أول حرف في اسم الأداة.'),
+        ),
+      );
+      return;
+    }
+
+    final existing = await Supabase.instance.client
+        .from('safety_tools')
+        .select('id')
+        .eq('name', toolName)
+        .maybeSingle();
 
     if (existing != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -83,23 +101,19 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
     );
 
     try {
-      final priceData =
-          await Supabase.instance.client
-              .from('safety_tool_prices')
-              .select('price')
-              .eq('tool_type', _selectedType ?? '')
-              .eq('material_type', _selectedMaterial ?? '')
-              .eq('capacity', _selectedCapacity ?? '')
-              .ilike('company_name', _companyController.text.trim())
-              .maybeSingle();
+      final priceData = await Supabase.instance.client
+          .from('safety_tool_prices')
+          .select('price')
+          .eq('tool_type', _selectedType ?? '')
+          .eq('material_type', _selectedMaterial ?? '')
+          .eq('capacity', _selectedCapacity ?? '')
+          .ilike('company_name', _companyController.text.trim())
+          .maybeSingle();
 
-      _price =
-          priceData != null
-              ? double.tryParse(priceData['price'].toString())
-              : 0.0;
+      _price = priceData != null ? double.tryParse(priceData['price'].toString()) : 0.0;
 
       await Supabase.instance.client.from('safety_tools').insert({
-        'name': _nameController.text.trim(),
+        'name': _capitalize(toolName),
         'type': _selectedType,
         'material_type': _selectedMaterial,
         'capacity': _selectedCapacity,
@@ -113,9 +127,7 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
       if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('خطأ أثناء الإضافة: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ أثناء الإضافة: $e')));
     }
   }
 
@@ -186,10 +198,7 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
                         },
                       ),
                     const SizedBox(height: 12),
-                    buildTextField(
-                      'الشركة التي تم الشراء منها',
-                      _companyController,
-                    ),
+                    buildTextField('الشركة التي تم الشراء منها', _companyController),
                     const SizedBox(height: 12),
                     ListTile(
                       tileColor: Colors.grey.shade200,
@@ -217,10 +226,7 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _addTool,
-                      child: const Text(
-                        'إضافة الأداة',
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      child: const Text('إضافة الأداة', style: TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(400, 50),
                         backgroundColor: const Color(0xff00408b),
@@ -245,8 +251,7 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
           labelText: label,
           hintText: 'أدخل $label',
         ),
-        validator:
-            (val) => val == null || val.isEmpty ? 'يرجى إدخال $label' : null,
+        validator: (val) => val == null || val.isEmpty ? 'يرجى إدخال $label' : null,
         textAlign: TextAlign.right,
       ),
     );
@@ -263,10 +268,7 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
       child: DropdownButtonFormField<String>(
         value: value,
         decoration: customInputDecoration.copyWith(labelText: label),
-        items:
-            items
-                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-                .toList(),
+        items: items.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
         onChanged: onChanged,
         validator: (val) => val == null ? 'يرجى اختيار $label' : null,
       ),

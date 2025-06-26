@@ -100,14 +100,14 @@ class _AddCorrectiveTaskManagerPageState
             padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
             child: ListView(
               children: [
-buildToolSearchField(
-  toolNames: toolNames,
-  controller: _toolController,
-  onSelected: (suggestion) {
-    _toolController.text = suggestion;
-    selectedToolName = suggestion;
-  },
-),
+                buildToolSearchField(
+                  toolNames: toolNames,
+                  controller: _toolController,
+                  onSelected: (suggestion) {
+                    _toolController.text = suggestion;
+                    selectedToolName = suggestion;
+                  },
+                ),
 
                 const SizedBox(height: 16),
                 buildCustomField(

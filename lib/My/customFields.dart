@@ -40,25 +40,24 @@ Widget buildToolSearchField({
                   name.toLowerCase().contains(pattern.toLowerCase()))
               .toList();
         },
-        builder: (context, typeAheadController, focusNode) {
-          controller.text = typeAheadController.text;
-          return TextField(
-            controller: typeAheadController,
-            focusNode: focusNode,
-            textDirection: TextDirection.rtl,
-            decoration: customInputDecoration.copyWith(
-              labelText: 'رمز أداة السلامة',
-              hintText: 'أدخل رمز الأداة',
-            ),
-          );
-        },
+        textFieldConfiguration: TextFieldConfiguration(
+          controller: controller,
+          textDirection: TextDirection.rtl,
+          decoration: customInputDecoration.copyWith(
+            labelText: 'رمز أداة السلامة',
+            hintText: 'أدخل رمز الأداة',
+          ),
+        ),
         itemBuilder: (context, String suggestion) {
           return ListTile(
             title: Text(suggestion, textDirection: TextDirection.rtl),
           );
         },
-        onSelected: onSelected,
-        emptyBuilder: (context) =>
+        onSuggestionSelected: (String suggestion) {
+          controller.text = suggestion;
+          onSelected(suggestion);
+        },
+        noItemsFoundBuilder: (context) =>
             const ListTile(title: Text('لم يتم العثور على نتائج')),
       ),
     ),
