@@ -26,7 +26,7 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
       'البودرة الجافة',
       'الرغوة (B.C.F)',
       'الماء',
-      'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي'
+      'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي',
     ],
     'hose reel': ['الماء'],
     'fire hydrant': ['الماء'],
@@ -35,13 +35,46 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
   final Map<String, List<String>> capacityOptions = {
     'ثاني اكسيد الكربون': ['2 kg', '5 kg', '6 kg', '10 kg', '20 kg', '30 kg'],
     'البودرة الجافة': ['1 kg', '2 kg', '6 kg', '12 kg', '25 kg', '50 kg'],
-    'الرغوة (B.C.F)': ['1 L', '2 L', '3 L', '4 L', '6 L', '9 L', '25 L', '50 L'],
+    'الرغوة (B.C.F)': [
+      '1 L',
+      '2 L',
+      '3 L',
+      '4 L',
+      '6 L',
+      '9 L',
+      '25 L',
+      '50 L',
+    ],
     'الماء': ['1 L', '2 L', '3 L', '4 L', '6 L', '9 L', '25 L', '50 L'],
-    'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي': ['1 kg', '2 kg', '3 kg', '4 kg', '6 kg', '9 kg', '25 kg', '50 kg'],
+    'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي': [
+      '1 kg',
+      '2 kg',
+      '3 kg',
+      '4 kg',
+      '6 kg',
+      '9 kg',
+      '25 kg',
+      '50 kg',
+    ],
   };
 
   Future<void> _addTool() async {
     if (!_formKey.currentState!.validate() || _purchaseDate == null) return;
+    final existing =
+        await Supabase.instance.client
+            .from('safety_tools')
+            .select('id')
+            .eq('name', _nameController.text.trim())
+            .maybeSingle();
+
+    if (existing != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ اسم الأداة مستخدم بالفعل، يرجى اختيار اسم آخر.'),
+        ),
+      );
+      return;
+    }
 
     final nextMaintenanceDate = DateTime(
       _purchaseDate!.year + 1,
@@ -50,16 +83,20 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
     );
 
     try {
-      final priceData = await Supabase.instance.client
-          .from('safety_tool_prices')
-          .select('price')
-          .eq('tool_type', _selectedType ?? '')
-          .eq('material_type', _selectedMaterial ?? '')
-          .eq('capacity', _selectedCapacity ?? '')
-          .eq('company_name', _companyController.text.trim())
-          .maybeSingle();
+      final priceData =
+          await Supabase.instance.client
+              .from('safety_tool_prices')
+              .select('price')
+              .eq('tool_type', _selectedType ?? '')
+              .eq('material_type', _selectedMaterial ?? '')
+              .eq('capacity', _selectedCapacity ?? '')
+              .ilike('company_name', _companyController.text.trim())
+              .maybeSingle();
 
-      _price = priceData != null ? double.tryParse(priceData['price'].toString()) : 0.0;
+      _price =
+          priceData != null
+              ? double.tryParse(priceData['price'].toString())
+              : 0.0;
 
       await Supabase.instance.client.from('safety_tools').insert({
         'name': _nameController.text.trim(),
@@ -76,9 +113,9 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
       if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ أثناء الإضافة: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ أثناء الإضافة: $e')));
     }
   }
 
@@ -89,7 +126,12 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: const Color(0xff00408b),
-          title: const Center(child: Text('إضافة أداة سلامة', style: TextStyle(color: Colors.white))),
+          title: const Center(
+            child: Text(
+              'إضافة أداة سلامة',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
           iconTheme: const IconThemeData(color: Colors.white),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -144,11 +186,16 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
                         },
                       ),
                     const SizedBox(height: 12),
-                    buildTextField('الشركة التي تم الشراء منها', _companyController),
+                    buildTextField(
+                      'الشركة التي تم الشراء منها',
+                      _companyController,
+                    ),
                     const SizedBox(height: 12),
                     ListTile(
                       tileColor: Colors.grey.shade200,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       title: Text(
                         _purchaseDate == null
                             ? 'اختر تاريخ الشراء'
@@ -170,7 +217,10 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _addTool,
-                      child: const Text('إضافة الأداة', style: TextStyle(color: Colors.white)),
+                      child: const Text(
+                        'إضافة الأداة',
+                        style: TextStyle(color: Colors.white),
+                      ),
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(400, 50),
                         backgroundColor: const Color(0xff00408b),
@@ -195,7 +245,8 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
           labelText: label,
           hintText: 'أدخل $label',
         ),
-        validator: (val) => val == null || val.isEmpty ? 'يرجى إدخال $label' : null,
+        validator:
+            (val) => val == null || val.isEmpty ? 'يرجى إدخال $label' : null,
         textAlign: TextAlign.right,
       ),
     );
@@ -212,9 +263,10 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
       child: DropdownButtonFormField<String>(
         value: value,
         decoration: customInputDecoration.copyWith(labelText: label),
-        items: items
-            .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-            .toList(),
+        items:
+            items
+                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                .toList(),
         onChanged: onChanged,
         validator: (val) => val == null ? 'يرجى اختيار $label' : null,
       ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 // Import your forms/pages here for reports/updates
 import 'package:FireWatch/technician/TechnichanEmergency.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:FireWatch/technician/TechnichanPeriodic/Locations.dart';
+import 'package:FireWatch/technician/TechnichanPeriodic.dart';
 import 'package:FireWatch/technician/TechnichanCorrective.dart';
 
 class TechnicianNotificationsPage extends StatefulWidget {

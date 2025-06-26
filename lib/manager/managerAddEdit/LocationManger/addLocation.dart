@@ -15,34 +15,34 @@ class _AddLocationPageState extends State<AddLocationPage> {
   final _codeController = TextEditingController();
 
   Future<void> _addLocation() async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    final code = _codeController.text.trim();
+  final code = _codeController.text.trim();
 
-    final existing = await Supabase.instance.client
-        .from('locations')
-        .select()
-        .eq('code', code)
-        .maybeSingle();
+  final existing = await Supabase.instance.client
+      .from('locations')
+      .select()
+      .ilike('code', code) 
+      .maybeSingle();
 
-    if (existing != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('هذا الترميز مستخدم بالفعل.')),
-      );
-      return;
-    }
-
-    await Supabase.instance.client.from('locations').insert({
-      'name': _nameController.text.trim(),
-      'code': code,
-    });
-
-    if (!mounted) return;
+  if (existing != null) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تمت إضافة المكان بنجاح')),
+      const SnackBar(content: Text('هذا الترميز مستخدم بالفعل.')),
     );
-    Navigator.pop(context);
+    return;
   }
+
+  await Supabase.instance.client.from('locations').insert({
+    'name': _nameController.text.trim(),
+    'code': code.toUpperCase(), // ✅ Optional consistency
+  });
+
+  if (!mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('تمت إضافة المكان بنجاح')),
+  );
+  Navigator.pop(context);
+}
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +50,9 @@ class _AddLocationPageState extends State<AddLocationPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Center(child: Text('إضافة مكان', style: TextStyle(color: Colors.white))),
+          title: const Center(
+            child: Text('إضافة مكان', style: TextStyle(color: Colors.white)),
+          ),
           backgroundColor: const Color(0xff00408b),
           iconTheme: const IconThemeData(color: Colors.white),
         ),
@@ -67,7 +69,11 @@ class _AddLocationPageState extends State<AddLocationPage> {
                     hintText: 'أدخل اسم المكان',
                     alignLabelWithHint: true,
                   ),
-                  validator: (val) => val == null || val.isEmpty ? 'يرجى إدخال اسم المكان' : null,
+                  validator:
+                      (val) =>
+                          val == null || val.isEmpty
+                              ? 'يرجى إدخال اسم المكان'
+                              : null,
                   textAlign: TextAlign.right,
                 ),
                 const SizedBox(height: 20),
@@ -78,13 +84,20 @@ class _AddLocationPageState extends State<AddLocationPage> {
                     hintText: 'أدخل ترميز المكان',
                     alignLabelWithHint: true,
                   ),
-                  validator: (val) => val == null || val.isEmpty ? 'يرجى إدخال ترميز المكان' : null,
+                  validator:
+                      (val) =>
+                          val == null || val.isEmpty
+                              ? 'يرجى إدخال ترميز المكان'
+                              : null,
                   textAlign: TextAlign.right,
                 ),
                 const SizedBox(height: 30),
                 ElevatedButton(
                   onPressed: _addLocation,
-                  child: const Text('إضافة', style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    'إضافة',
+                    style: TextStyle(color: Colors.white),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xff00408b),
                     minimumSize: const Size(400, 50),

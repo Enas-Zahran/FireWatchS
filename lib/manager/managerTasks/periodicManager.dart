@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
+
 class PeriodicTasksPage extends StatefulWidget {
   const PeriodicTasksPage({super.key});
 
@@ -112,6 +113,8 @@ class _PeriodicTasksPageState extends State<PeriodicTasksPage> {
               'assigned': isAssigned,
               'assignedTo': assignedTo,
               'locationName': _getLocationNameFromToolName(tool['name']),
+              'type': tool['type'],
+              'material_type': tool['material_type'],
             };
           }).toList();
     });
@@ -419,14 +422,13 @@ class _PeriodicTasksPageState extends State<PeriodicTasksPage> {
                     );
                     final updatedTaskCount =
                         (userData['task_count'] ?? 0) + selectedToolIds.length;
-
                     await supabase
                         .from('users')
                         .update({
-                          'tool_type': updatedToolTypes,
-                          'material_type': updatedMaterialTypes,
+                          'tool_type': toolTypes.toList(), // ✅ This is good now
+                          'material_type':
+                              materialTypes.toList(), // ✅ Also good
                           'work_place': updatedWorkPlaces,
-                          'task_count': updatedTaskCount,
                         })
                         .eq('id', selectedTechnicianId!);
 

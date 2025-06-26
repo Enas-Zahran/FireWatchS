@@ -38,14 +38,16 @@ class _AllToolsPageState extends State<AllToolsPage> {
     setState(() => loading = false);
   }
 
-  void _applySearch() {
-    final query = _searchController.text.trim().toLowerCase();
-    filteredTools =
-        tools.where((tool) {
-          final name = tool['name']?.toString().toLowerCase() ?? '';
-          return name.contains(query);
-        }).toList();
-  }
+void _applySearch() {
+  final query = _searchController.text.trim().toLowerCase();
+  filteredTools = tools.where((tool) {
+    final name = tool['name']?.toString().toLowerCase() ?? '';
+    final type = tool['type']?.toString().toLowerCase() ?? '';
+    final material = tool['material_type']?.toString().toLowerCase() ?? '';
+    return name.contains(query) || type.contains(query) || material.contains(query);
+  }).toList();
+}
+
 
   void _goToAddTool() {
     Navigator.push(

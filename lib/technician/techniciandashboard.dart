@@ -4,7 +4,7 @@ import 'package:FireWatch/technician/TechnichanCorrective.dart';
 import 'package:FireWatch/technician/TechnichanEmergency.dart';
 import 'package:FireWatch/technician/addTechReports/addEmergency.dart';
 import 'package:FireWatch/technician/addTechReports/addCorrective.dart';
-import 'package:FireWatch/technician/TechnichanPeriodic/Locations.dart';
+import 'package:FireWatch/technician/TechnichanPeriodic.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TechnicianDashboardPage extends StatelessWidget {
@@ -95,10 +95,10 @@ class TechnicianDashboardPage extends StatelessWidget {
                             onPressed: () async {
                               await Supabase.instance.client.auth.signOut();
                               if (context.mounted) {
-                                Navigator.pop(context); // Close dialog
+                                Navigator.pop(context); 
                                 Navigator.pop(
                                   context,
-                                ); // Go back (or navigate to login)
+                                ); 
                               }
                             },
                             child: const Text('نعم'),

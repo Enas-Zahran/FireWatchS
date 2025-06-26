@@ -9,7 +9,11 @@ class HoseReelReportPage extends StatefulWidget {
   final String taskId;
   final String toolName;
 
-  const HoseReelReportPage({super.key, required this.taskId, required this.toolName});
+  const HoseReelReportPage({
+    super.key,
+    required this.taskId,
+    required this.toolName,
+  });
 
   @override
   State<HoseReelReportPage> createState() => _HoseReelReportPageState();
@@ -21,12 +25,17 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
   DateTime? nextDate;
   Map<String, bool> checks = {};
   Map<String, TextEditingController> notes = {};
-  final SignatureController technicianSignature = SignatureController(penStrokeWidth: 2);
-  final SignatureController companySignature = SignatureController(penStrokeWidth: 2);
+  final SignatureController technicianSignature = SignatureController(
+    penStrokeWidth: 2,
+  );
+  final SignatureController companySignature = SignatureController(
+    penStrokeWidth: 2,
+  );
   final _formKey = GlobalKey<FormState>();
   final TextEditingController companyRep = TextEditingController();
   String? companyName;
   String? technicianName;
+  final TextEditingController otherNotesController = TextEditingController();
 
   final List<String> steps = [
     'الفحص الأولي لجميع الأجزاء من التأكل والصداء.',
@@ -35,8 +44,8 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
     'اختبار آلية البكرة. ',
     'اختبار الانسدادات وتدفق المياه. ',
     'تفقد تزييت الأجزاء المتحركة. ',
-    
-    'التحقق من اللافتات والملصقات.'
+
+    'التحقق من اللافتات والملصقات.',
   ];
 
   @override
@@ -53,21 +62,32 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
   Future<void> _fetchTechnician() async {
     final user = supabase.auth.currentUser;
     if (user != null) {
-      final data = await supabase.from('users').select('name').eq('id', user.id).maybeSingle();
+      final data =
+          await supabase
+              .from('users')
+              .select('name')
+              .eq('id', user.id)
+              .maybeSingle();
       setState(() => technicianName = data?['name']);
     }
   }
 
   Future<void> _fetchCompany() async {
-  final currentYear = DateTime.now().year;
-final data = await supabase
-  .from('contract_companies')
-  .select('company_name')
-  .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
-  .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
-  .maybeSingle();
-setState(() => companyName = data?['company_name']);
-
+    final currentYear = DateTime.now().year;
+    final data =
+        await supabase
+            .from('contract_companies')
+            .select('company_name')
+            .gte(
+              'contract_start_date',
+              DateTime(currentYear, 1, 1).toIso8601String(),
+            )
+            .lte(
+              'contract_start_date',
+              DateTime(currentYear, 12, 31).toIso8601String(),
+            )
+            .maybeSingle();
+    setState(() => companyName = data?['company_name']);
   }
 
   void _pickDate() async {
@@ -87,8 +107,13 @@ setState(() => companyName = data?['company_name']);
   }
 
   Future<void> _submitReport() async {
-    if (!_formKey.currentState!.validate() || currentDate == null || technicianSignature.isEmpty || companySignature.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')));
+    if (!_formKey.currentState!.validate() ||
+        currentDate == null ||
+        technicianSignature.isEmpty ||
+        companySignature.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
+      );
       return;
     }
 
@@ -100,26 +125,53 @@ setState(() => companyName = data?['company_name']);
       'company_name': companyName,
       'company_rep': companyRep.text.trim(),
       'technician_name': technicianName,
-      'steps': steps.map((s) => {
-        'step': s,
-        'checked': checks[s],
-        'note': notes[s]!.text.trim(),
-      }).toList(),
+      'steps':
+          steps
+              .map(
+                (s) => {
+                  'step': s,
+                  'checked': checks[s],
+                  'note': notes[s]!.text.trim(),
+                },
+              )
+              .toList(),
       'technician_signed': true,
       'company_signed': true,
+      'other_notes': otherNotesController.text.trim(),
     });
 
-    await supabase.from('periodic_tasks').update({'status': 'done'}).eq('id', widget.taskId);
-    await supabase.from('safety_tools').update({'next_maintenance_date': nextDate!.toIso8601String()}).eq('name', widget.toolName);
+    await supabase
+        .from('periodic_tasks')
+        .update({'status': 'done'})
+        .eq('id', widget.taskId);
+    await supabase
+        .from('safety_tools')
+        .update({'next_maintenance_date': nextDate!.toIso8601String()})
+        .eq('name', widget.toolName);
     await supabase.from('export_requests').insert({
       'tool_code': widget.toolName,
-      'reason': 'حسب تقرير فحص دوري - ${notes.entries.where((e) => e.value.text.isNotEmpty).map((e) => e.value.text).join(', ')}',
+      'reason':
+          'حسب تقرير فحص دوري - ${notes.entries.where((e) => e.value.text.isNotEmpty).map((e) => e.value.text).join(', ')}',
       'created_by': supabase.auth.currentUser!.id,
-      'created_by_role': 'فني السلامة العامة'
+      'created_by_role': 'فني السلامة العامة',
     });
 
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير وإرسال الأداة للإخراج')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تم حفظ التقرير وإرسال الأداة للإخراج')),
+    );
+  }
+
+  @override
+  void dispose() {
+    for (var controller in notes.values) {
+      controller.dispose();
+    }
+    companyRep.dispose();
+    otherNotesController.dispose();
+    technicianSignature.dispose();
+    companySignature.dispose();
+    super.dispose();
   }
 
   @override
@@ -128,7 +180,10 @@ setState(() => companyName = data?['company_name']);
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('تقرير فحص خرطوم الحريق', style: TextStyle(color: Colors.white)),
+          title: const Text(
+            'تقرير فحص خرطوم الحريق',
+            style: TextStyle(color: Colors.white),
+          ),
           centerTitle: true,
           backgroundColor: const Color(0xff00408b),
           leading: IconButton(
@@ -136,27 +191,29 @@ setState(() => companyName = data?['company_name']);
             onPressed: () {
               showDialog(
                 context: context,
-                builder: (context) => Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: AlertDialog(
-                    title: const Text('تأكيد الخروج'),
-                    content: const Text('هل أنت متأكد من رغبتك في مغادرة التقرير؟'),
-                    actions: [
-                           TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          Navigator.pop(context);
-                        },
-                        child: const Text('نعم'),
+                builder:
+                    (context) => Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: AlertDialog(
+                        title: const Text('تأكيد الخروج'),
+                        content: const Text(
+                          'هل أنت متأكد من رغبتك في مغادرة التقرير؟',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Navigator.pop(context);
+                            },
+                            child: const Text('نعم'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('لا'),
+                          ),
+                        ],
                       ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('لا'),
-                      ),
-                 
-                    ],
-                  ),
-                ),
+                    ),
               );
             },
           ),
@@ -169,13 +226,18 @@ setState(() => companyName = data?['company_name']);
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 2,
                   child: ListTile(
                     title: Text('الأداة: ${widget.toolName}'),
-                    subtitle: currentDate != null
-                        ? Text('تاريخ الفحص: ${DateFormat.yMd().format(currentDate!)}\nتاريخ الفحص القادم: ${DateFormat.yMd().format(nextDate!)}')
-                        : const Text('لم يتم اختيار تاريخ'),
+                    subtitle:
+                        currentDate != null
+                            ? Text(
+                              'تاريخ الفحص: ${DateFormat.yMd().format(currentDate!)}\nتاريخ الفحص القادم: ${DateFormat.yMd().format(nextDate!)}',
+                            )
+                            : const Text('لم يتم اختيار تاريخ'),
                     trailing: IconButton(
                       icon: const Icon(Icons.calendar_today),
                       onPressed: _pickDate,
@@ -183,37 +245,83 @@ setState(() => companyName = data?['company_name']);
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('الإجراءات:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'الإجراءات:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
-                ...steps.map((step) => Card(
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: Row(
-                      children: [
-                        Checkbox(value: checks[step], onChanged: (v) => setState(() => checks[step] = v!)),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(step, textAlign: TextAlign.right)),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.edit_note),
-                          onPressed: () => showDialog(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: Text('ملاحظات لـ $step'),
-                              content: TextFormField(controller: notes[step], maxLines: 4, textAlign: TextAlign.right),
-                              actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('تم'))],
-                            ),
+                ...steps.map(
+                  (step) => Card(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: checks[step],
+                            onChanged: (v) => setState(() => checks[step] = v!),
                           ),
-                        )
-                      ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(step, textAlign: TextAlign.right),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.edit_note),
+                            onPressed:
+                                () => showDialog(
+                                  context: context,
+                                  builder:
+                                      (_) => AlertDialog(
+                                        title: Text('ملاحظات لـ $step'),
+                                        content: TextFormField(
+                                          controller: notes[step],
+                                          maxLines: 4,
+                                          textAlign: TextAlign.right,
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed:
+                                                () => Navigator.pop(context),
+                                            child: const Text('تم'),
+                                          ),
+                                        ],
+                                      ),
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                )),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'ملاحظات أخرى إن وجدت:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: otherNotesController,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    hintText: 'أدخل ملاحظات إضافية...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 16),
                 Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 2,
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -223,19 +331,27 @@ setState(() => companyName = data?['company_name']);
                         Text('اسم الشركة المنفذة: ${companyName ?? '...'}'),
                         TextFormField(
                           controller: companyRep,
-                          decoration: const InputDecoration(labelText: 'اسم مندوب الشركة'),
+                          decoration: const InputDecoration(
+                            labelText: 'اسم مندوب الشركة',
+                          ),
                           validator: (v) => v!.isEmpty ? 'مطلوب' : null,
                         ),
                         const SizedBox(height: 12),
                         const Text('توقيع مندوب الشركة:'),
-                        Signature(controller: companySignature, height: 100, backgroundColor: Colors.grey[200]!),
+                        Signature(
+                          controller: companySignature,
+                          height: 100,
+                          backgroundColor: Colors.grey[200]!,
+                        ),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 2,
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -244,7 +360,11 @@ setState(() => companyName = data?['company_name']);
                       children: [
                         Text('اسم الفني: ${technicianName ?? '...'}'),
                         const Text('توقيع الفني:'),
-                        Signature(controller: technicianSignature, height: 100, backgroundColor: Colors.grey[200]!),
+                        Signature(
+                          controller: technicianSignature,
+                          height: 100,
+                          backgroundColor: Colors.grey[200]!,
+                        ),
                       ],
                     ),
                   ),
@@ -258,11 +378,16 @@ setState(() => companyName = data?['company_name']);
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xff00408b),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ),

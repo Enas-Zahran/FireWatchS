@@ -96,9 +96,7 @@ class _TechnicianPeriodicLocationsPageState extends State<TechnicianPeriodicLoca
           ),
         ),
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Navigate to Fire Extinguisher Report')),
-      );
+     
     } else if (type == 'fire hydrant') {
       Navigator.push(
         context,
@@ -109,9 +107,7 @@ class _TechnicianPeriodicLocationsPageState extends State<TechnicianPeriodicLoca
           ),
         ),
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Navigate to Fire Hydrant Report')),
-      );
+ 
     } else if (type == 'hose reel') {
       Navigator.push(
         context,
@@ -122,9 +118,7 @@ class _TechnicianPeriodicLocationsPageState extends State<TechnicianPeriodicLoca
           ),
         ),
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Navigate to Hose Reel Report')),
-      );
+   
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('نوع الأداة غير معروف: $type')),

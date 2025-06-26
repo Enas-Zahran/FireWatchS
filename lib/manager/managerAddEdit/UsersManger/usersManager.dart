@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:FireWatch/manager/managerAddEdit/UsersManger/pendingApprovals.dart';
 import 'package:FireWatch/manager/managerAddEdit/UsersManger/editUser.dart';
+
 //Todo material type filter and tool type isn't working correctly
 class ManagerUserListPage extends StatefulWidget {
   static const String routeName = 'managerUserList';
@@ -27,12 +28,13 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
   final taskRanges = ['1-10', '10-20', '20-30', '30+'];
   final toolTypes = ['fire extinguisher', 'hose reel', 'fire hydrant'];
   final materialTypes = [
-    'طفايات ثاني أوكسيد الكربون',
-    'طفايات البودرة الجافة',
-    'طفايات الرغوة (B.C.F)',
-    'طفايات الماء',
-    'طفايات البودرة الجافة ذات مستشعر حرارة الأتوماتيكي',
+    'ثاني اكسيد الكربون',
+    'البودرة الجافة',
+    'الرغوة (B.C.F)',
+    'الماء',
+    'البودرة الجافة ذات مستشعر حرارة الاتوماتيكي',
   ];
+
   final workPlaces = ['هندسية', 'طبية', 'خدمات', 'مباني خارجية'];
 
   @override
@@ -68,23 +70,20 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
   }
 
   bool containsAny(dynamic rawValue, List<String> selected) {
-    if (rawValue == null || rawValue.toString().trim().isEmpty) return false;
+    print('RAW VALUE: $rawValue');
+    if (rawValue == null || selected.isEmpty) return false;
+
+    if (rawValue is List) {
+      return selected.any((item) => rawValue.contains(item));
+    }
+
     try {
       final decoded = jsonDecode(rawValue.toString());
       if (decoded is List) {
-        final values = decoded.map((e) => e.toString().trim()).toList();
-        return selected.any((item) => values.contains(item));
-      } else if (decoded is String) {
-        return selected.contains(decoded.trim());
+        return selected.any((item) => decoded.contains(item));
       }
-    } catch (_) {
-      final value = rawValue.toString().replaceAll('"', '').trim();
-      if (value.contains(',')) {
-        final parts = value.split(',').map((e) => e.trim()).toList();
-        return selected.any((item) => parts.contains(item));
-      }
-      return selected.contains(value);
-    }
+    } catch (_) {}
+
     return false;
   }
 
@@ -300,7 +299,6 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
                       selectedWorkPlaces.clear();
                       _applyFilters();
                     });
-                    
                   },
                   child: const Text('إعادة تعيين'),
                 ),
