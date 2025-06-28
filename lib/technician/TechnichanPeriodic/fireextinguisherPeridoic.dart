@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:signature/signature.dart';
 import 'package:intl/intl.dart';
-import 'package:FireWatch/technician/MaterialExit.dart';
-import 'package:intl/date_symbol_data_local.dart';
 
 class FireExtinguisherReportPage extends StatefulWidget {
   final String taskId;
@@ -18,27 +16,21 @@ class FireExtinguisherReportPage extends StatefulWidget {
   });
 
   @override
-  State<FireExtinguisherReportPage> createState() =>
-      _FireExtinguisherReportPageState();
+  State<FireExtinguisherReportPage> createState() => _FireExtinguisherReportPageState();
 }
 
-class _FireExtinguisherReportPageState
-    extends State<FireExtinguisherReportPage> {
+class _FireExtinguisherReportPageState extends State<FireExtinguisherReportPage> {
   final supabase = Supabase.instance.client;
   DateTime? currentDate;
   DateTime? nextDate;
   Map<String, bool> checks = {};
   Map<String, TextEditingController> notes = {};
-  final SignatureController technicianSignature = SignatureController(
-    penStrokeWidth: 2,
-  );
-  final SignatureController companySignature = SignatureController(
-    penStrokeWidth: 2,
-  );
+  final SignatureController technicianSignature = SignatureController(penStrokeWidth: 2);
+  final SignatureController companySignature = SignatureController(penStrokeWidth: 2);
   final _formKey = GlobalKey<FormState>();
   final TextEditingController companyRep = TextEditingController();
-  String? companyName;
   final TextEditingController otherNotesController = TextEditingController();
+  String? companyName;
 
   final List<String> steps = [
     'الطلاء لجسم الطفاية',
@@ -76,20 +68,12 @@ class _FireExtinguisherReportPageState
 
   Future<void> _fetchCompany() async {
     final currentYear = DateTime.now().year;
-    final data =
-        await supabase
-            .from('contract_companies')
-            .select('company_name')
-            .gte(
-              'contract_start_date',
-              DateTime(currentYear, 1, 1).toIso8601String(),
-            )
-            .lte(
-              'contract_start_date',
-              DateTime(currentYear, 12, 31).toIso8601String(),
-            )
-            .maybeSingle();
-
+    final data = await supabase
+        .from('contract_companies')
+        .select('company_name')
+        .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
+        .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
+        .maybeSingle();
     setState(() => companyName = data?['company_name']);
   }
 
@@ -110,10 +94,7 @@ class _FireExtinguisherReportPageState
   }
 
   Future<void> _submitReport() async {
-    if (!_formKey.currentState!.validate() ||
-        currentDate == null ||
-        technicianSignature.isEmpty ||
-        companySignature.isEmpty) {
+    if (!_formKey.currentState!.validate() || currentDate == null || technicianSignature.isEmpty || companySignature.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
       );
@@ -123,16 +104,26 @@ class _FireExtinguisherReportPageState
     final user = supabase.auth.currentUser;
     if (user == null) return;
 
-    final stepsData =
-        steps
-            .map(
-              (s) => {
-                'step': s,
-                'checked': checks[s],
-                'note': notes[s]!.text.trim(),
-              },
-            )
-            .toList();
+    final stepsData = steps.map((s) => {
+      'step': s,
+      'checked': checks[s],
+      'note': notes[s]!.text.trim(),
+    }).toList();
+
+    final exportMaterials = stepsData
+        .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
+        .map((s) => {
+              'toolName': widget.toolName,
+              'note': s['note'],
+            })
+        .toList();
+
+    if (otherNotesController.text.trim().isNotEmpty) {
+      exportMaterials.add({
+        'toolName': widget.toolName,
+        'note': otherNotesController.text.trim(),
+      });
+    }
 
     await supabase.from('fire_extinguisher_reports').insert({
       'task_id': widget.taskId,
@@ -148,37 +139,31 @@ class _FireExtinguisherReportPageState
       'other_notes': otherNotesController.text.trim(),
     });
 
-    await supabase
-        .from('periodic_tasks')
-        .update({'status': 'done'})
-        .eq('id', widget.taskId);
-    await supabase
-        .from('safety_tools')
-        .update({'next_maintenance_date': nextDate!.toIso8601String()})
-        .eq('name', widget.toolName);
+    await supabase.from('periodic_tasks').update({'status': 'done'}).eq('id', widget.taskId);
+    await supabase.from('safety_tools').update({'next_maintenance_date': nextDate!.toIso8601String()}).eq('name', widget.toolName);
 
-    final materialsToExport =
-        stepsData
-            .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
-            .map((s) => {'toolName': widget.toolName, 'note': s['note']})
-            .toList();
+    if (exportMaterials.isNotEmpty) {
+      final reasonText = exportMaterials.map((m) => m['note']).join(' - ');
 
-    if (materialsToExport.isNotEmpty) {
-      await supabase.from('material_exit_authorizations').insert({
-        'technician_id': user.id,
-        'technician_name': widget.technicianName,
-        'materials': materialsToExport,
-        'agreed': true,
+      await supabase.from('export_requests').insert({
+        'tool_code': widget.toolName,
+        'created_by': user.id,
+        'created_by_role': 'فني السلامة العامة',
+        'usage_reason': reasonText,
+        'action_taken': 'تقرير دوري - طفاية الحريق',
+        'covered_area': '',
+        'is_approved': false,
         'created_at': DateTime.now().toIso8601String(),
       });
     }
 
-    if (!mounted) return;
+    if (!context.mounted) return;
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم حفظ التقرير وإرسال الأداة للإخراج')),
+      const SnackBar(content: Text('تم حفظ التقرير بنجاح')),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -378,20 +363,20 @@ class _FireExtinguisherReportPageState
                 const SizedBox(height: 20),
                 Center(
                   child: ElevatedButton.icon(
-                    // onPressed: _submitReport,
-                    onPressed: () async{
-                       await initializeDateFormatting('ar_SA', null);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) => MaterialExitAuthorizationPage(
-                                materials: [],
-                                technicianName: widget.technicianName,
-                              ),
-                        ),
-                      );
-                    },
+                    onPressed: _submitReport,
+                    // onPressed: () async{
+                    //    await initializeDateFormatting('ar_SA', null);
+                    //   Navigator.push(
+                    //     context,
+                    //     MaterialPageRoute(
+                    //       builder:
+                    //           (context) => MaterialExitAuthorizationPage(
+                    //             materials: [],
+                    //             technicianName: widget.technicianName,
+                    //           ),
+                    //     ),
+                    //   );
+                    // },
                     icon: const Icon(Icons.check),
                     label: const Text('تقديم التقرير وإنهاء المهمة'),
                     style: ElevatedButton.styleFrom(

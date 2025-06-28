@@ -60,31 +60,19 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
   Future<void> _fetchTechnician() async {
     final user = supabase.auth.currentUser;
     if (user != null) {
-      final data =
-          await supabase
-              .from('users')
-              .select('name')
-              .eq('id', user.id)
-              .maybeSingle();
+      final data = await supabase.from('users').select('name').eq('id', user.id).maybeSingle();
       setState(() => technicianName = data?['name']);
     }
   }
 
   Future<void> _fetchCompany() async {
     final currentYear = DateTime.now().year;
-    final data =
-        await supabase
-            .from('contract_companies')
-            .select('company_name')
-            .gte(
-              'contract_start_date',
-              DateTime(currentYear, 1, 1).toIso8601String(),
-            )
-            .lte(
-              'contract_start_date',
-              DateTime(currentYear, 12, 31).toIso8601String(),
-            )
-            .maybeSingle();
+    final data = await supabase
+        .from('contract_companies')
+        .select('company_name')
+        .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
+        .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
+        .maybeSingle();
     setState(() => companyName = data?['company_name']);
   }
 
@@ -115,6 +103,15 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
       return;
     }
 
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final stepsData = steps.map((s) => {
+          'step': s,
+          'checked': checks[s],
+          'note': notes[s]!.text.trim(),
+        }).toList();
+
     await supabase.from('fire_hydrant_reports').insert({
       'task_id': widget.taskId,
       'tool_name': widget.toolName,
@@ -123,46 +120,53 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
       'company_name': companyName,
       'company_rep': companyRep.text.trim(),
       'technician_name': technicianName,
-      'steps':
-          steps
-              .map(
-                (s) => {
-                  'step': s,
-                  'checked': checks[s],
-                  'note': notes[s]!.text.trim(),
-                },
-              )
-              .toList(),
+      'steps': stepsData,
       'technician_signed': true,
       'company_signed': true,
       'other_notes': otherNotesController.text.trim(),
     });
 
-    await supabase
-        .from('periodic_tasks')
-        .update({'status': 'done'})
-        .eq('id', widget.taskId);
-    await supabase
-        .from('safety_tools')
-        .update({'next_maintenance_date': nextDate!.toIso8601String()})
-        .eq('name', widget.toolName);
-    await supabase.from('export_requests').insert({
-      'tool_code': widget.toolName,
-      'reason':
-          'حسب تقرير فحص دوري - ${notes.entries.where((e) => e.value.text.isNotEmpty).map((e) => e.value.text).join(', ')}',
-      'created_by': supabase.auth.currentUser!.id,
-      'created_by_role': 'فني السلامة العامة',
-    });
+    await supabase.from('periodic_tasks').update({'status': 'done'}).eq('id', widget.taskId);
+    await supabase.from('safety_tools').update({'next_maintenance_date': nextDate!.toIso8601String()}).eq('name', widget.toolName);
+
+    final exportMaterials = stepsData
+        .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
+        .map((s) => {
+              'toolName': widget.toolName,
+              'note': s['note'],
+            })
+        .toList();
+
+    if (otherNotesController.text.trim().isNotEmpty) {
+      exportMaterials.add({
+        'toolName': widget.toolName,
+        'note': otherNotesController.text.trim(),
+      });
+    }
+
+    if (!mounted) return;
+
+    if (exportMaterials.isNotEmpty) {
+      await supabase.from('export_requests').insert({
+        'tool_code': widget.toolName,
+        'created_by': user.id,
+        'created_by_role': 'فني السلامة العامة',
+        'usage_reason': exportMaterials.map((m) => m['note']).join(' - '),
+        'action_taken': 'التقرير الدوري - صنبور حريق',
+        'covered_area': '',
+        'is_approved': false,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    }
 
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم حفظ التقرير وإرسال الأداة للإخراج')),
+      const SnackBar(content: Text('تم حفظ التقرير')),
     );
   }
 
   @override
   void dispose() {
-    // Dispose all step note controllers
     for (var controller in notes.values) {
       controller.dispose();
     }

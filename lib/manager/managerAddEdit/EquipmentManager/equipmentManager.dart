@@ -5,11 +5,10 @@ import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/toolDetails.da
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/addSafteyTool.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/editSafteyTool.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/Permessions/exportRequests.dart';
+import 'package:FireWatch/technician/MaterialExit.dart';
 
 //Todo السعر لازم يتغير تلقائي حسب النوع
 class AllToolsPage extends StatefulWidget {
- 
-
   @override
   State<AllToolsPage> createState() => _AllToolsPageState();
 }
@@ -19,11 +18,43 @@ class _AllToolsPageState extends State<AllToolsPage> {
   List<Map<String, dynamic>> tools = [];
   List<Map<String, dynamic>> filteredTools = [];
   bool loading = true;
+  String? userRole;
+  String? technicianName;
+  bool _hasPendingRequests = false;
+  Future<void> _fetchUserRole() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    final data =
+        await Supabase.instance.client
+            .from('users')
+            .select('role, name')
+            .eq('id', user.id)
+            .maybeSingle();
+
+    setState(() {
+      userRole = data?['role'];
+      technicianName = data?['name'];
+    });
+  }
+
+  Future<void> _checkPendingRequests() async {
+    final data = await Supabase.instance.client
+        .from('export_requests')
+        .select()
+        .eq('status', 'pending');
+
+    setState(() {
+      _hasPendingRequests = data.isNotEmpty;
+    });
+  }
 
   @override
   void initState() {
     super.initState();
     _fetchTools();
+    _checkPendingRequests();
+    _fetchUserRole();
   }
 
   Future<void> _fetchTools() async {
@@ -38,16 +69,19 @@ class _AllToolsPageState extends State<AllToolsPage> {
     setState(() => loading = false);
   }
 
-void _applySearch() {
-  final query = _searchController.text.trim().toLowerCase();
-  filteredTools = tools.where((tool) {
-    final name = tool['name']?.toString().toLowerCase() ?? '';
-    final type = tool['type']?.toString().toLowerCase() ?? '';
-    final material = tool['material_type']?.toString().toLowerCase() ?? '';
-    return name.contains(query) || type.contains(query) || material.contains(query);
-  }).toList();
-}
-
+  void _applySearch() {
+    final query = _searchController.text.trim().toLowerCase();
+    filteredTools =
+        tools.where((tool) {
+          final name = tool['name']?.toString().toLowerCase() ?? '';
+          final type = tool['type']?.toString().toLowerCase() ?? '';
+          final material =
+              tool['material_type']?.toString().toLowerCase() ?? '';
+          return name.contains(query) ||
+              type.contains(query) ||
+              material.contains(query);
+        }).toList();
+  }
 
   void _goToAddTool() {
     Navigator.push(
@@ -88,12 +122,100 @@ void _applySearch() {
           actions: [
             IconButton(icon: const Icon(Icons.add), onPressed: _goToAddTool),
             IconButton(
-              icon: const Icon(Icons.mail, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => ExportRequestsPage()),
-                );
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.mail, color: Colors.white),
+                  if (_hasPendingRequests)
+                    const Positioned(
+                      top: -4,
+                      right: -4,
+                      child: CircleAvatar(
+                        radius: 6,
+                        backgroundColor: Color(0xffae2f34),
+                      ),
+                    ),
+                ],
+              ),
+              onPressed: () async {
+                //                 if (userRole == 'فني السلامة العامة') {
+                //                   final extinguisherReports = await Supabase.instance.client
+                //                       .from('fire_extinguisher_reports')
+                //                       .select('tool_name, steps, other_notes')
+                //                       .eq('technician_name', technicianName ?? '');
+
+                //                   final hydrantReports = await Supabase.instance.client
+                //                       .from('fire_hydrant_reports')
+                //                       .select('tool_name, steps, other_notes')
+                //                       .eq('technician_name', technicianName ?? '');
+
+                //                   final hoseReelReports = await Supabase.instance.client
+                //                       .from('hose_reel_reports')
+                //                       .select('tool_name, steps, other_notes')
+                //                       .eq('technician_name', technicianName ?? '');
+
+                //                   final allReports = [
+                //                     ...extinguisherReports,
+                //                     ...hydrantReports,
+                //                     ...hoseReelReports,
+                //                   ];
+                //                   final List<Map<String, dynamic>> materialsToExport = [];
+
+                //                   for (var report in allReports) {
+                //                     final tool = report['tool_name'];
+                //                     final steps = List<Map<String, dynamic>>.from(
+                //                       report['steps'] ?? [],
+                //                     );
+                //                     for (var step in steps) {
+                //                       final note = step['note']?.toString().trim();
+                //                       if (note != null && note.isNotEmpty) {
+                //                         materialsToExport.add({'toolName': tool, 'note': note});
+                //                       }
+                //                     }
+                //                     final otherNote = report['other_notes']?.toString().trim();
+                //                     if (otherNote != null && otherNote.isNotEmpty) {
+                //                       materialsToExport.add({
+                //                         'toolName': tool,
+                //                         'note': otherNote,
+                //                       });
+                //                     }
+                //                   }
+
+                //                   if (materialsToExport.isEmpty) {
+                //                     ScaffoldMessenger.of(context).showSnackBar(
+                //                       const SnackBar(
+                //                         content: Text('لا يوجد أدوات تحتوي على ملاحظات'),
+                //                       ),
+                //                     );
+                //                     return;
+                //                   }
+
+                //                   final reasonText = materialsToExport
+                //                       .map((e) => e['note'])
+                //                       .join(' - ');
+
+                //                   Navigator.push(
+                //                     context,
+                //                     MaterialPageRoute(
+                //                       builder:
+                //                           (_) => MaterialExitAuthorizationPage(
+
+                //                           ),
+                //                     ),
+                //                   );
+                //                } else {
+                //   final result = await
+                // //   Navigator.push(
+                // //   context,
+                // //   MaterialPageRoute(
+                // //     builder: (_) => ExportRequestMaterialsPage(
+
+                // //     ),
+                // //   ),
+                // // );
+
+                //   if (result == true) _checkPendingRequests();
+                // }
               },
             ),
           ],

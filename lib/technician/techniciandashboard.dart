@@ -6,6 +6,8 @@ import 'package:FireWatch/technician/addTechReports/addEmergency.dart';
 import 'package:FireWatch/technician/addTechReports/addCorrective.dart';
 import 'package:FireWatch/technician/TechnichanPeriodic.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:FireWatch/technician/MaterialExit.dart';
+import 'package:FireWatch/technician/ApprovedList.dart';
 
 class TechnicianDashboardPage extends StatelessWidget {
   static const String routeName = 'technicianTasksMainPage';
@@ -50,6 +52,30 @@ class TechnicianDashboardPage extends StatelessWidget {
     );
   }
 
+  void _navigateToApprovedRequests(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
+
+    if (user != null) {
+      final userId = user.id;
+      final userName = user.userMetadata?['name'] ?? '---';
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (_) => TechnicianApprovedRequestsPage(
+                technicianId: userId,
+                technicianName: userName,
+              ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('حدث خطأ: لم يتم العثور على المستخدم')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -58,7 +84,7 @@ class TechnicianDashboardPage extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: const Color(0xff00408b),
           title: const Center(
-            child: Text('لوحة مهام   ', style: TextStyle(color: Colors.white)),
+            child: Text('لوحة مهام', style: TextStyle(color: Colors.white)),
           ),
           actions: [
             IconButton(
@@ -72,6 +98,23 @@ class TechnicianDashboardPage extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const TechnicianNotificationsPage(),
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.assignment_turned_in, color: Colors.white),
+              tooltip: 'تصاريح الإخراج المعتمدة',
+              onPressed: () => _navigateToApprovedRequests(context),
+            ),
+            IconButton(
+              icon: const Icon(Icons.file_upload, color: Colors.white),
+              tooltip: 'تصريح إخراج المواد',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MaterialExitAuthorizationPage(),
                   ),
                 );
               },
@@ -91,14 +134,12 @@ class TechnicianDashboardPage extends StatelessWidget {
                           'سيتم تسجيل خروجك من الحساب. هل أنت متأكد؟',
                         ),
                         actions: [
-                              TextButton(
+                          TextButton(
                             onPressed: () async {
                               await Supabase.instance.client.auth.signOut();
                               if (context.mounted) {
-                                Navigator.pop(context); 
-                                Navigator.pop(
-                                  context,
-                                ); 
+                                Navigator.pop(context); // close dialog
+                                Navigator.pop(context); // go back to login
                               }
                             },
                             child: const Text('نعم'),
@@ -107,7 +148,6 @@ class TechnicianDashboardPage extends StatelessWidget {
                             onPressed: () => Navigator.pop(context),
                             child: const Text('لا'),
                           ),
-                      
                         ],
                       ),
                     ),

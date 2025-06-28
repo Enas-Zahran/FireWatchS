@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:signature/signature.dart';
 import 'package:intl/intl.dart';
-import 'package:FireWatch/technician/MaterialExit.dart';
 
 class FireExtinguisherCorrectiveEmergency extends StatefulWidget {
   final String taskId;
@@ -17,23 +16,17 @@ class FireExtinguisherCorrectiveEmergency extends StatefulWidget {
   });
 
   @override
-  State<FireExtinguisherCorrectiveEmergency> createState() =>
-      _FireExtinguisherCorrectiveEmergencyState();
+  State<FireExtinguisherCorrectiveEmergency> createState() => _FireExtinguisherCorrectiveEmergencyState();
 }
 
-class _FireExtinguisherCorrectiveEmergencyState
-    extends State<FireExtinguisherCorrectiveEmergency> {
+class _FireExtinguisherCorrectiveEmergencyState extends State<FireExtinguisherCorrectiveEmergency> {
   final supabase = Supabase.instance.client;
   DateTime? currentDate;
   DateTime? nextDate;
   Map<String, bool> checks = {};
   Map<String, TextEditingController> notes = {};
-  final SignatureController technicianSignature = SignatureController(
-    penStrokeWidth: 2,
-  );
-  final SignatureController companySignature = SignatureController(
-    penStrokeWidth: 2,
-  );
+  final SignatureController technicianSignature = SignatureController(penStrokeWidth: 2);
+  final SignatureController companySignature = SignatureController(penStrokeWidth: 2);
   final _formKey = GlobalKey<FormState>();
   final TextEditingController companyRep = TextEditingController();
   final TextEditingController otherNotesController = TextEditingController();
@@ -66,31 +59,19 @@ class _FireExtinguisherCorrectiveEmergencyState
   Future<void> _fetchTechnician() async {
     final user = supabase.auth.currentUser;
     if (user != null) {
-      final data =
-          await supabase
-              .from('users')
-              .select('name')
-              .eq('id', user.id)
-              .maybeSingle();
+      final data = await supabase.from('users').select('name').eq('id', user.id).maybeSingle();
       setState(() => technicianName = data?['name']);
     }
   }
 
   Future<void> _fetchCompany() async {
     final currentYear = DateTime.now().year;
-    final data =
-        await supabase
-            .from('contract_companies')
-            .select('company_name')
-            .gte(
-              'contract_start_date',
-              DateTime(currentYear, 1, 1).toIso8601String(),
-            )
-            .lte(
-              'contract_start_date',
-              DateTime(currentYear, 12, 31).toIso8601String(),
-            )
-            .maybeSingle();
+    final data = await supabase
+        .from('contract_companies')
+        .select('company_name')
+        .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
+        .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
+        .maybeSingle();
     setState(() => companyName = data?['company_name']);
   }
 
@@ -111,28 +92,34 @@ class _FireExtinguisherCorrectiveEmergencyState
   }
 
   Future<void> _submitReport() async {
-    if (!_formKey.currentState!.validate() ||
-        currentDate == null ||
-        technicianSignature.isEmpty ||
-        companySignature.isEmpty) {
+    if (!_formKey.currentState!.validate() || currentDate == null || technicianSignature.isEmpty || companySignature.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
       );
       return;
     }
 
-    final writtenNotes =
-        notes.entries
-            .where((e) => e.value.text.trim().isNotEmpty)
-            .map(
-              (e) => {'toolName': widget.toolName, 'note': e.value.text.trim()},
-            )
-            .toList();
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final stepsData = steps.map((s) => {
+      'step': s,
+      'checked': checks[s],
+      'note': notes[s]!.text.trim(),
+    }).toList();
+
+    final writtenNotes = stepsData
+        .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
+        .map((s) => {
+          'toolName': widget.toolName,
+          'note': s['note'],
+        })
+        .toList();
 
     if (otherNotesController.text.trim().isNotEmpty) {
       writtenNotes.add({
         'toolName': widget.toolName,
-        'note': 'أخرى: ${otherNotesController.text.trim()}',
+        'note': otherNotesController.text.trim(),
       });
     }
 
@@ -145,51 +132,36 @@ class _FireExtinguisherCorrectiveEmergencyState
       'company_name': companyName,
       'company_rep': companyRep.text.trim(),
       'technician_name': technicianName,
-      'steps':
-          steps
-              .map(
-                (s) => {
-                  'step': s,
-                  'checked': checks[s],
-                  'note': notes[s]!.text.trim(),
-                },
-              )
-              .toList(),
+      'steps': stepsData,
       'other_notes': otherNotesController.text.trim(),
       'technician_signed': true,
       'company_signed': true,
     });
 
-    final taskTable =
-        widget.taskType == 'طارئ' ? 'emergency_tasks' : 'corrective_tasks';
-    await supabase
-        .from(taskTable)
-        .update({'status': 'done'})
-        .eq('id', widget.taskId);
-
-    await supabase
-        .from('safety_tools')
-        .update({'next_maintenance_date': nextDate!.toIso8601String()})
-        .eq('name', widget.toolName);
+    final taskTable = widget.taskType == 'طارئ' ? 'emergency_tasks' : 'corrective_tasks';
+    await supabase.from(taskTable).update({'status': 'done'}).eq('id', widget.taskId);
+    await supabase.from('safety_tools').update({'next_maintenance_date': nextDate!.toIso8601String()}).eq('name', widget.toolName);
 
     if (writtenNotes.isNotEmpty && context.mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder:
-              (_) => MaterialExitAuthorizationPage(
-                materials: writtenNotes,
-                technicianName: technicianName ?? '',
-              ),
-        ),
-      );
-    } else {
-      if (!context.mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير')));
+      final reasonText = writtenNotes.map((m) => m['note']).join(' - ');
+
+      await supabase.from('export_requests').insert({
+        'tool_code': widget.toolName,
+        'created_by': user.id,
+        'created_by_role': 'فني السلامة العامة',
+        'usage_reason': reasonText,
+        'action_taken': 'تقرير ${widget.taskType} - طفاية الحريق',
+        'covered_area': '',
+        'is_approved': false,
+        'created_at': DateTime.now().toIso8601String(),
+      });
     }
+
+    if (!context.mounted) return;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تم حفظ التقرير')),
+    );
   }
 
   @override
@@ -203,6 +175,8 @@ class _FireExtinguisherCorrectiveEmergencyState
     companySignature.dispose();
     super.dispose();
   }
+
+
 
   @override
   Widget build(BuildContext context) {
