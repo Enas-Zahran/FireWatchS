@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:signature/signature.dart';
 import 'package:intl/intl.dart';
+import 'package:FireWatch/technician/MaterialExit.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 class FireExtinguisherReportPage extends StatefulWidget {
   final String taskId;
@@ -59,18 +61,18 @@ class _FireExtinguisherReportPageState
     }
     _fetchCompany();
   }
-  @override
-void dispose() {
-  for (var controller in notes.values) {
-    controller.dispose();
-  }
-  otherNotesController.dispose(); 
-  companyRep.dispose();
-  technicianSignature.dispose();
-  companySignature.dispose();
-  super.dispose();
-}
 
+  @override
+  void dispose() {
+    for (var controller in notes.values) {
+      controller.dispose();
+    }
+    otherNotesController.dispose();
+    companyRep.dispose();
+    technicianSignature.dispose();
+    companySignature.dispose();
+    super.dispose();
+  }
 
   Future<void> _fetchCompany() async {
     final currentYear = DateTime.now().year;
@@ -204,7 +206,7 @@ void dispose() {
                           'هل أنت متأكد من رغبتك في مغادرة التقرير؟',
                         ),
                         actions: [
-                            TextButton(
+                          TextButton(
                             onPressed: () {
                               Navigator.pop(context);
                               Navigator.pop(context);
@@ -215,7 +217,6 @@ void dispose() {
                             onPressed: () => Navigator.pop(context),
                             child: const Text('لا'),
                           ),
-                        
                         ],
                       ),
                     ),
@@ -377,7 +378,20 @@ void dispose() {
                 const SizedBox(height: 20),
                 Center(
                   child: ElevatedButton.icon(
-                    onPressed: _submitReport,
+                    // onPressed: _submitReport,
+                    onPressed: () async{
+                       await initializeDateFormatting('ar_SA', null);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => MaterialExitAuthorizationPage(
+                                materials: [],
+                                technicianName: widget.technicianName,
+                              ),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.check),
                     label: const Text('تقديم التقرير وإنهاء المهمة'),
                     style: ElevatedButton.styleFrom(
