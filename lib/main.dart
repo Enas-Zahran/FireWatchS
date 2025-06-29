@@ -99,7 +99,8 @@ class MyApp extends StatelessWidget {
           TechnicianDashboardPage.routeName:
               (context) => TechnicianDashboardPage(),
           //manager
-          ManagerDashboard.managerDashboardRoute: (context) => ManagerDashboard(),
+          ManagerDashboard.managerDashboardRoute:
+              (context) => ManagerDashboard(),
           //head
           Headdashboard.headdashboardRoute: (context) => Headdashboard(),
           //All

@@ -109,114 +109,111 @@ if (data['return_date'] != null) {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: const Color(0xff00408b),
-          title: const Text('مراجعة طلب إخراج المواد', style: TextStyle(color: Colors.white)),
-          iconTheme: const IconThemeData(color: Colors.white),
-        ),
-      body: loading
-    ? const Center(child: CircularProgressIndicator())
-    : SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GestureDetector(
-              onTap: () {
-                if (request != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ExportRequestDetailsPage(request: request!),
-                    ),
-                  );
-                }
-              },
-              child: Row(
-                children: [
-                  const Icon(Icons.person, color: Color(0xff00408b)),
-                  const SizedBox(width: 8),
-                  Text(
-                    'الفني: ${widget.technicianName}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      decoration: TextDecoration.underline,
-                      color: Colors.blue,
-                    ),
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xff00408b),
+        title: const Text('مراجعة طلب إخراج المواد', style: TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+    body: loading
+        ? const Center(child: CircularProgressIndicator())
+        : SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () {
+              if (request != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ExportRequestDetailsPage(request: request!),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text('المواد المطلوبة:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            ...(request?['tool_codes'] as List<dynamic>?)?.map((item) {
-              return ListTile(
-                leading: const Icon(Icons.build),
-                title: Text(item['toolName'] ?? ''),
-                subtitle: Text(item['note'] ?? ''),
-              );
-            }) ?? [],
-            const SizedBox(height: 20),
-            TextField(
-              controller: _vehicleOwnerController,
-              decoration: const InputDecoration(labelText: 'اسم السائق'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _vehicleNumberController,
-              decoration: const InputDecoration(labelText: 'رقم المركبة'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _vehicleTypeController,
-              decoration: const InputDecoration(labelText: 'نوع المركبة'),
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              value: materialType,
-              items: const [
-                DropdownMenuItem(value: 'مقتنيات شخصية', child: Text('مقتنيات شخصية')),
-                DropdownMenuItem(value: 'مقتنيات جامعية', child: Text('مقتنيات جامعية')),
-              ],
-              onChanged: (v) => setState(() => materialType = v!),
-              decoration: const InputDecoration(labelText: 'نوع المواد'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _returnDateController,
-              readOnly: true,
-              onTap: _pickReturnDate,
-              decoration: const InputDecoration(labelText: 'تاريخ الإرجاع'),
-            ),
-            const SizedBox(height: 20),
-            const Text('توقيع المدير:', style: TextStyle(fontSize: 16)),
-            Signature(
-              controller: managerSignature,
-              height: 100,
-              backgroundColor: Colors.grey[300]!,
-            ),
-            const SizedBox(height: 20),
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: _approveRequest,
-                icon: const Icon(Icons.check),
-                label: const Text('اعتماد الطلب'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xff00408b),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                );
+              }
+            },
+            child: Row(
+              children: [
+                const Icon(Icons.person, color: Color(0xff00408b)),
+                const SizedBox(width: 8),
+                Text(
+                  'الفني: ${widget.technicianName}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    decoration: TextDecoration.underline,
+                    color: Colors.blue,
+                  ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text('المواد المطلوبة:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          ...(request?['tool_codes'] as List<dynamic>?)?.map((item) {
+            return ListTile(
+              leading: const Icon(Icons.build),
+              title: Text(item['toolName'] ?? ''),
+              subtitle: Text(item['note'] ?? ''),
+            );
+          }) ?? [],
+          const SizedBox(height: 20),
+          TextField(
+            controller: _vehicleOwnerController,
+            decoration: const InputDecoration(labelText: 'اسم السائق'),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _vehicleNumberController,
+            decoration: const InputDecoration(labelText: 'رقم المركبة'),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _vehicleTypeController,
+            decoration: const InputDecoration(labelText: 'نوع المركبة'),
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            value: materialType,
+            items: const [
+              DropdownMenuItem(value: 'مقتنيات شخصية', child: Text('مقتنيات شخصية')),
+              DropdownMenuItem(value: 'مقتنيات جامعية', child: Text('مقتنيات جامعية')),
+            ],
+            onChanged: (v) => setState(() => materialType = v!),
+            decoration: const InputDecoration(labelText: 'نوع المواد'),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _returnDateController,
+            readOnly: true,
+            onTap: _pickReturnDate,
+            decoration: const InputDecoration(labelText: 'تاريخ الإرجاع'),
+          ),
+          const SizedBox(height: 20),
+          const Text('توقيع المدير:', style: TextStyle(fontSize: 16)),
+          Signature(
+            controller: managerSignature,
+            height: 100,
+            backgroundColor: Colors.grey[300]!,
+          ),
+          const SizedBox(height: 20),
+          Center(
+            child: ElevatedButton.icon(
+              onPressed: _approveRequest,
+              icon: const Icon(Icons.check),
+              label: const Text('اعتماد الطلب'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff00408b),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-
-      ),
+    ),
+    
     );
   }
 }
