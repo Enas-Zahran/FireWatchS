@@ -106,97 +106,122 @@ class _FireExtinguisherReportPageState
     }
   }
 
-  Future<void> _submitReport() async {
-    if (!_formKey.currentState!.validate() ||
-        currentDate == null ||
-        technicianSignature.isEmpty ||
-        companySignature.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
-      );
-      return;
+Future<void> _submitReport() async {
+  if (!_formKey.currentState!.validate() ||
+      currentDate == null ||
+      technicianSignature.isEmpty ||
+      companySignature.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
+    );
+    return;
+  }
+
+  final user = supabase.auth.currentUser;
+  if (user == null) return;
+
+  final stepsData = steps
+      .map(
+        (s) => {
+          'step': s,
+          'checked': checks[s],
+          'note': notes[s]!.text.trim(),
+        },
+      )
+      .toList();
+
+  try {
+    // 1. Save fire extinguisher report
+    await supabase.from('fire_extinguisher_reports').insert({
+      'task_id': widget.taskId,
+      'tool_name': widget.toolName,
+      'inspection_date': currentDate!.toIso8601String(),
+      'next_inspection_date': nextDate!.toIso8601String(),
+      'company_name': companyName,
+      'company_rep': companyRep.text.trim(),
+      'technician_name': widget.technicianName,
+      'steps': stepsData,
+      'technician_signed': true,
+      'company_signed': true,
+      'other_notes': otherNotesController.text.trim(),
+    });
+
+    // 2. Mark periodic task as done
+    await supabase
+        .from('periodic_tasks')
+        .update({'status': 'done'})
+        .eq('id', widget.taskId);
+
+    // 3. Update next maintenance date
+    await supabase
+        .from('safety_tools')
+        .update({'next_maintenance_date': nextDate!.toIso8601String()})
+        .eq('name', widget.toolName);
+
+    // 4. Prepare export materials
+    final exportMaterials = stepsData
+        .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
+        .map((s) => {'toolName': widget.toolName, 'note': s['note']})
+        .toList();
+
+    if (otherNotesController.text.trim().isNotEmpty) {
+      exportMaterials.add({
+        'toolName': widget.toolName,
+        'note': otherNotesController.text.trim(),
+      });
     }
 
-    final user = supabase.auth.currentUser;
-    if (user == null) return;
+    if (!mounted) return;
 
-    final stepsData =
-        steps
-            .map(
-              (s) => {
-                'step': s,
-                'checked': checks[s],
-                'note': notes[s]!.text.trim(),
-              },
-            )
-            .toList();
+    if (exportMaterials.isNotEmpty) {
+      // 🔁 Check if export request already exists
+      final existing = await supabase
+          .from('export_requests')
+          .select('id, tool_codes')
+          .eq('created_by', user.id)
+          .eq('is_approved', false)
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
 
-    try {
-      await supabase.from('fire_extinguisher_reports').insert({
-        'task_id': widget.taskId,
-        'tool_name': widget.toolName,
-        'inspection_date': currentDate!.toIso8601String(),
-        'next_inspection_date': nextDate!.toIso8601String(),
-        'company_name': companyName,
-        'company_rep': companyRep.text.trim(),
-        'technician_name': widget.technicianName,
-        'steps': stepsData,
-        'technician_signed': true,
-        'company_signed': true,
-        'other_notes': otherNotesController.text.trim(),
-      });
+      if (existing != null) {
+        final existingId = existing['id'];
+        final List<dynamic> currentTools = existing['tool_codes'] ?? [];
 
-      await supabase
-          .from('periodic_tasks')
-          .update({'status': 'done'})
-          .eq('id', widget.taskId);
+        final updatedTools = [...currentTools, ...exportMaterials];
 
-      await supabase
-          .from('safety_tools')
-          .update({'next_maintenance_date': nextDate!.toIso8601String()})
-          .eq('name', widget.toolName);
-
-      final exportMaterials =
-          stepsData
-              .where(
-                (s) => s['note'] != null && s['note'].toString().isNotEmpty,
-              )
-              .map((s) => {'toolName': widget.toolName, 'note': s['note']})
-              .toList();
-
-      if (otherNotesController.text.trim().isNotEmpty) {
-        exportMaterials.add({
-          'toolName': widget.toolName,
-          'note': otherNotesController.text.trim(),
-        });
-      }
-
-      if (!mounted) return;
-
-      if (exportMaterials.isNotEmpty) {
+        await supabase.from('export_requests').update({
+          'tool_codes': updatedTools,
+          'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
+        }).eq('id', existingId);
+      } else {
+        // Create new request
         await supabase.from('export_requests').insert({
-          'tool_code': widget.toolName,
+          'tool_codes': exportMaterials,
           'created_by': user.id,
           'created_by_role': 'فني السلامة العامة',
-           'created_by_name': widget.technicianName, 
+          'created_by_name': widget.technicianName,
           'usage_reason': exportMaterials.map((m) => m['note']).join(' - '),
-          'action_taken': 'التقرير الدوري - صنبور حريق',
+          'action_taken': 'التقرير الدوري - طفاية حريق',
           'is_approved': false,
           'created_at': DateTime.now().toIso8601String(),
         });
       }
-
-      Navigator.pop(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير')));
-    } catch (e) {
-      print('🔥 Supabase error: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')));
     }
+
+    Navigator.pop(context);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير')));
+  } catch (e) {
+    print('🔥 Supabase error: $e');
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')));
   }
+}
+
+
 
   @override
   Widget build(BuildContext context) {
