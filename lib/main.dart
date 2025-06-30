@@ -17,12 +17,13 @@ import 'package:FireWatch/manager/managerdashboard.dart';
 import 'package:FireWatch/head/headdashboard.dart';
 //All
 import 'package:FireWatch/All/addemergency.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+await initializeDateFormatting('ar_SA', null);
   await Supabase.initialize(
     url: 'https://xtggednhsfejnozgruhb.supabase.co',
     anonKey:

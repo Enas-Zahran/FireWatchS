@@ -315,37 +315,40 @@ class _AllToolsPageState extends State<AllToolsPage> {
                                                       builder:
                                                           (
                                                             context,
-                                                          ) => AlertDialog(
-                                                            title: const Text(
-                                                              'تأكيد الحذف',
-                                                            ),
-                                                            content: Text(
-                                                              'هل أنت متأكد من حذف الأداة "${tool['name']}"؟',
-                                                            ),
-                                                            actions: [
-                                                              TextButton(
-                                                                onPressed:
-                                                                    () => Navigator.pop(
-                                                                      context,
-                                                                      false,
-                                                                    ),
-                                                                child:
-                                                                    const Text(
-                                                                      'إلغاء',
-                                                                    ),
+                                                          ) => Directionality(
+                                                            textDirection: TextDirection.rtl,
+                                                            child: AlertDialog(
+                                                              title: const Text(
+                                                                'تأكيد الحذف',
                                                               ),
-                                                              TextButton(
-                                                                onPressed:
-                                                                    () => Navigator.pop(
-                                                                      context,
-                                                                      true,
-                                                                    ),
-                                                                child:
-                                                                    const Text(
-                                                                      'نعم',
-                                                                    ),
+                                                              content: Text(
+                                                                'هل أنت متأكد من حذف الأداة "${tool['name']}"؟',
                                                               ),
-                                                            ],
+                                                              actions: [
+                                                                TextButton(
+                                                                  onPressed:
+                                                                      () => Navigator.pop(
+                                                                        context,
+                                                                        false,
+                                                                      ),
+                                                                  child:
+                                                                      const Text(
+                                                                        'إلغاء',
+                                                                      ),
+                                                                ),
+                                                                TextButton(
+                                                                  onPressed:
+                                                                      () => Navigator.pop(
+                                                                        context,
+                                                                        true,
+                                                                      ),
+                                                                  child:
+                                                                      const Text(
+                                                                        'نعم',
+                                                                      ),
+                                                                ),
+                                                              ],
+                                                            ),
                                                           ),
                                                     );
                                                     if (confirm == true) {

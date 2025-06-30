@@ -132,7 +132,7 @@ class _FireExtinguisherReportPageState
             .toList();
 
     try {
-      await supabase.from('fire_hydrant_reports').insert({
+      await supabase.from('fire_extinguisher_reports').insert({
         'task_id': widget.taskId,
         'tool_name': widget.toolName,
         'inspection_date': currentDate!.toIso8601String(),
@@ -178,9 +178,9 @@ class _FireExtinguisherReportPageState
           'tool_code': widget.toolName,
           'created_by': user.id,
           'created_by_role': 'فني السلامة العامة',
+           'created_by_name': widget.technicianName, 
           'usage_reason': exportMaterials.map((m) => m['note']).join(' - '),
           'action_taken': 'التقرير الدوري - صنبور حريق',
-          'covered_area': '',
           'is_approved': false,
           'created_at': DateTime.now().toIso8601String(),
         });

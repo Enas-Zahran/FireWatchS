@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:FireWatch/My/InputDecoration.dart';
-
+import 'dart:ui'as ui;
 class AddSafetyToolPage extends StatefulWidget {
   static const routeName = '/addTool';
 
@@ -133,104 +133,107 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xff00408b),
-        title: const Center(
-          child: Text(
-            'إضافة أداة سلامة',
-            style: TextStyle(color: Colors.white),
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color(0xff00408b),
+          title: const Center(
+            child: Text(
+              'إضافة أداة سلامة',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+          iconTheme: const IconThemeData(color: Colors.white),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              Navigator.pop(context);
+            },
           ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  buildTextField('اسم الأداة', _nameController),
-                  const SizedBox(height: 12),
-                  buildDropdown(
-                    label: 'نوع أداة السلامة',
-                    value: _selectedType,
-                    items: materialOptions.keys.toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        _selectedType = val;
-                        _selectedMaterial = null;
-                        _selectedCapacity = null;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  if (_selectedType != null)
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    buildTextField('اسم الأداة', _nameController),
+                    const SizedBox(height: 12),
                     buildDropdown(
-                      label: 'نوع المادة',
-                      value: _selectedMaterial,
-                      items: materialOptions[_selectedType!]!,
+                      label: 'نوع أداة السلامة',
+                      value: _selectedType,
+                      items: materialOptions.keys.toList(),
                       onChanged: (val) {
                         setState(() {
-                          _selectedMaterial = val;
+                          _selectedType = val;
+                          _selectedMaterial = null;
                           _selectedCapacity = null;
                         });
                       },
                     ),
-                  const SizedBox(height: 12),
-                  if (_selectedMaterial != null)
-                    buildDropdown(
-                      label: 'السعة',
-                      value: _selectedCapacity,
-                      items: capacityOptions[_selectedMaterial!]!,
-                      onChanged: (val) {
-                        setState(() => _selectedCapacity = val);
+                    const SizedBox(height: 12),
+                    if (_selectedType != null)
+                      buildDropdown(
+                        label: 'نوع المادة',
+                        value: _selectedMaterial,
+                        items: materialOptions[_selectedType!]!,
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedMaterial = val;
+                            _selectedCapacity = null;
+                          });
+                        },
+                      ),
+                    const SizedBox(height: 12),
+                    if (_selectedMaterial != null)
+                      buildDropdown(
+                        label: 'السعة',
+                        value: _selectedCapacity,
+                        items: capacityOptions[_selectedMaterial!]!,
+                        onChanged: (val) {
+                          setState(() => _selectedCapacity = val);
+                        },
+                      ),
+                    const SizedBox(height: 12),
+                    buildTextField('الشركة التي تم الشراء منها', _companyController),
+                    const SizedBox(height: 12),
+                    ListTile(
+                      tileColor: Colors.grey.shade200,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      title: Text(
+                        _purchaseDate == null
+                            ? 'اختر تاريخ الشراء'
+                            : DateFormat('yyyy-MM-dd').format(_purchaseDate!),
+                      ),
+                      trailing: const Icon(Icons.calendar_today),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setState(() => _purchaseDate = picked);
+                        }
                       },
                     ),
-                  const SizedBox(height: 12),
-                  buildTextField('الشركة التي تم الشراء منها', _companyController),
-                  const SizedBox(height: 12),
-                  ListTile(
-                    tileColor: Colors.grey.shade200,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _addTool,
+                      child: const Text('إضافة الأداة', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(400, 50),
+                        backgroundColor: const Color(0xff00408b),
+                      ),
                     ),
-                    title: Text(
-                      _purchaseDate == null
-                          ? 'اختر تاريخ الشراء'
-                          : DateFormat('yyyy-MM-dd').format(_purchaseDate!),
-                    ),
-                    trailing: const Icon(Icons.calendar_today),
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        setState(() => _purchaseDate = picked);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _addTool,
-                    child: const Text('إضافة الأداة', style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(400, 50),
-                      backgroundColor: const Color(0xff00408b),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

@@ -268,29 +268,32 @@ class _ToolPricesListPageState extends State<ToolPricesListPage> {
                                 final confirm = await showDialog<bool>(
                                   context: context,
                                   builder:
-                                      (context) => AlertDialog(
-                                        title: const Text('تأكيد الحذف'),
-                                        content: const Text(
-                                          'هل أنت متأكد أنك تريد حذف هذا السعر؟',
+                                      (context) => Directionality(
+                                        textDirection: TextDirection.rtl,
+                                        child: AlertDialog(
+                                          title: const Text('تأكيد الحذف'),
+                                          content: const Text(
+                                            'هل أنت متأكد أنك تريد حذف هذا السعر؟',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed:
+                                                  () => Navigator.pop(
+                                                    context,
+                                                    false,
+                                                  ),
+                                              child: const Text('إلغاء'),
+                                            ),
+                                            TextButton(
+                                              onPressed:
+                                                  () => Navigator.pop(
+                                                    context,
+                                                    true,
+                                                  ),
+                                              child: const Text('حذف'),
+                                            ),
+                                          ],
                                         ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed:
-                                                () => Navigator.pop(
-                                                  context,
-                                                  false,
-                                                ),
-                                            child: const Text('إلغاء'),
-                                          ),
-                                          TextButton(
-                                            onPressed:
-                                                () => Navigator.pop(
-                                                  context,
-                                                  true,
-                                                ),
-                                            child: const Text('حذف'),
-                                          ),
-                                        ],
                                       ),
                                 );
                                 if (confirm == true) {
