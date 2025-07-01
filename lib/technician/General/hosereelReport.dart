@@ -6,11 +6,13 @@ import 'package:intl/intl.dart';
 class HoseReelReportPage extends StatefulWidget {
   final String taskId;
   final String toolName;
+  final String taskType; // دوري - علاجي - طارئ
 
   const HoseReelReportPage({
     super.key,
     required this.taskId,
     required this.toolName,
+    required this.taskType,
   });
 
   @override
@@ -33,11 +35,11 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
 
   final List<String> steps = [
     'الفحص الأولي لجميع الأجزاء من التأكل والصداء.',
-    ' التحقق من وصول المياه وضغطها. ',
-    'فحص الخرطوم وفوهة القاذف . ',
-    'اختبار آلية البكرة. ',
-    'اختبار الانسدادات وتدفق المياه. ',
-    'تفقد تزييت الأجزاء المتحركة. ',
+    'التحقق من وصول المياه وضغطها.',
+    'فحص الخرطوم وفوهة القاذف.',
+    'اختبار آلية البكرة.',
+    'اختبار الانسدادات وتدفق المياه.',
+    'تفقد تزييت الأجزاء المتحركة.',
     'التحقق من اللافتات والملصقات.',
   ];
 
@@ -104,60 +106,96 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
       'note': notes[s]!.text.trim(),
     }).toList();
 
-    await supabase.from('hose_reel_reports').insert({
-      'task_id': widget.taskId,
-      'tool_name': widget.toolName,
-      'inspection_date': currentDate!.toIso8601String(),
-      'next_inspection_date': nextDate!.toIso8601String(),
-      'company_name': companyName,
-      'company_rep': companyRep.text.trim(),
-      'technician_name': technicianName,
-      'steps': stepsData,
-      'technician_signed': true,
-      'company_signed': true,
-      'other_notes': otherNotesController.text.trim(),
-    });
+    try {
+      final insertData = {
+        'tool_name': widget.toolName,
+        'inspection_date': currentDate!.toIso8601String(),
+        'next_inspection_date': nextDate!.toIso8601String(),
+        'company_name': companyName,
+        'company_rep': companyRep.text.trim(),
+        'technician_name': technicianName,
+        'steps': stepsData,
+        'technician_signed': true,
+        'company_signed': true,
+        'other_notes': otherNotesController.text.trim(),
+      };
 
-    await supabase.from('periodic_tasks').update({'status': 'done'}).eq('id', widget.taskId);
-    await supabase.from('safety_tools').update({'next_maintenance_date': nextDate!.toIso8601String()}).eq('name', widget.toolName);
+      if (widget.taskType == 'دوري') {
+        insertData['task_id'] = widget.taskId;
+      }
 
-    final exportMaterials = stepsData
-        .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
-        .map((s) => {
-              'toolName': widget.toolName,
-              'note': s['note'],
-            })
-        .toList();
+      await supabase.from('hose_reel_reports').insert(insertData);
 
-    if (otherNotesController.text.trim().isNotEmpty) {
-      exportMaterials.add({
-        'toolName': widget.toolName,
-        'note': otherNotesController.text.trim(),
-      });
+      if (widget.taskType == 'دوري') {
+        await supabase.from('periodic_tasks').update({'status': 'done'}).eq('id', widget.taskId);
+      }
+
+      await supabase
+          .from('safety_tools')
+          .update({'next_maintenance_date': nextDate!.toIso8601String()})
+          .eq('name', widget.toolName);
+
+      final exportMaterials = stepsData
+          .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
+          .map((s) => {'toolName': widget.toolName, 'note': s['note']})
+          .toList();
+
+      if (otherNotesController.text.trim().isNotEmpty) {
+        exportMaterials.add({
+          'toolName': widget.toolName,
+          'note': otherNotesController.text.trim(),
+        });
+      }
+
+      if (!mounted) return;
+
+      if (exportMaterials.isNotEmpty) {
+        final existing = await supabase
+            .from('export_requests')
+            .select('id, tool_codes')
+            .eq('created_by', user.id)
+            .eq('is_approved', false)
+            .order('created_at', ascending: false)
+            .limit(1)
+            .maybeSingle();
+
+        if (existing != null) {
+          final existingId = existing['id'];
+          final List<dynamic> currentTools = existing['tool_codes'] ?? [];
+          final updatedTools = [...currentTools, ...exportMaterials];
+
+          await supabase.from('export_requests').update({
+            'tool_codes': updatedTools,
+            'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
+          }).eq('id', existingId);
+        } else {
+          await supabase.from('export_requests').insert({
+            'tool_codes': exportMaterials,
+            'created_by': user.id,
+            'created_by_name': technicianName,
+            'created_by_role': 'فني السلامة العامة',
+            'usage_reason': exportMaterials.map((m) => m['note']).join(' - '),
+            'action_taken': 'التقرير ${widget.taskType} - خرطوم الحريق',
+            'is_approved': false,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        }
+      }
+
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم حفظ التقرير')),
+      );
+    } catch (e) {
+      print('🔥 Supabase error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')),
+      );
     }
-
-    if (!mounted) return;
-
-    if (exportMaterials.isNotEmpty) {
-      final reasonText = exportMaterials.map((m) => m['note']).join(' - ');
-
-      await supabase.from('export_requests').insert({
-        'tool_code': widget.toolName,
-        'created_by': user.id,
-        'created_by_role': 'فني السلامة العامة',
-        'usage_reason': reasonText,
-        'action_taken': 'التقرير الدوري - خرطوم الحريق',
-        'covered_area': '',
-        'is_approved': false,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-    }
-
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم حفظ التقرير')),
-    );
   }
+
+
+
 
   @override
   void dispose() {

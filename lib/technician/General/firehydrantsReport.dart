@@ -60,19 +60,31 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
   Future<void> _fetchTechnician() async {
     final user = supabase.auth.currentUser;
     if (user != null) {
-      final data = await supabase.from('users').select('name').eq('id', user.id).maybeSingle();
+      final data =
+          await supabase
+              .from('users')
+              .select('name')
+              .eq('id', user.id)
+              .maybeSingle();
       setState(() => technicianName = data?['name']);
     }
   }
 
   Future<void> _fetchCompany() async {
     final currentYear = DateTime.now().year;
-    final data = await supabase
-        .from('contract_companies')
-        .select('company_name')
-        .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
-        .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
-        .maybeSingle();
+    final data =
+        await supabase
+            .from('contract_companies')
+            .select('company_name')
+            .gte(
+              'contract_start_date',
+              DateTime(currentYear, 1, 1).toIso8601String(),
+            )
+            .lte(
+              'contract_start_date',
+              DateTime(currentYear, 12, 31).toIso8601String(),
+            )
+            .maybeSingle();
     setState(() => companyName = data?['company_name']);
   }
 
@@ -93,12 +105,6 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
   }
 
   Future<void> _submitReport() async {
-    print('🧪 Form submitted');
-print('Current date: $currentDate');
-print('Tech signed: ${technicianSignature.isNotEmpty}');
-print('Company signed: ${companySignature.isNotEmpty}');
-print('Company rep: ${companyRep.text}');
-
     if (!_formKey.currentState!.validate() ||
         currentDate == null ||
         technicianSignature.isEmpty ||
@@ -112,63 +118,111 @@ print('Company rep: ${companyRep.text}');
     final user = supabase.auth.currentUser;
     if (user == null) return;
 
-    final stepsData = steps.map((s) => {
-          'step': s,
-          'checked': checks[s],
-          'note': notes[s]!.text.trim(),
-        }).toList();
+    final stepsData =
+        steps
+            .map(
+              (s) => {
+                'step': s,
+                'checked': checks[s],
+                'note': notes[s]!.text.trim(),
+              },
+            )
+            .toList();
 
-    await supabase.from('fire_hydrant_reports').insert({
-      'task_id': widget.taskId,
-      'tool_name': widget.toolName,
-      'inspection_date': currentDate!.toIso8601String(),
-      'next_inspection_date': nextDate!.toIso8601String(),
-      'company_name': companyName,
-      'company_rep': companyRep.text.trim(),
-      'technician_name': technicianName,
-      'steps': stepsData,
-      'technician_signed': true,
-      'company_signed': true,
-      'other_notes': otherNotesController.text.trim(),
-    });
-
-    await supabase.from('periodic_tasks').update({'status': 'done'}).eq('id', widget.taskId);
-    await supabase.from('safety_tools').update({'next_maintenance_date': nextDate!.toIso8601String()}).eq('name', widget.toolName);
-
-    final exportMaterials = stepsData
-        .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
-        .map((s) => {
-              'toolName': widget.toolName,
-              'note': s['note'],
-            })
-        .toList();
-
-    if (otherNotesController.text.trim().isNotEmpty) {
-      exportMaterials.add({
-        'toolName': widget.toolName,
-        'note': otherNotesController.text.trim(),
+    try {
+      // 1. Save fire hydrant report
+      await supabase.from('fire_hydrant_reports').insert({
+        'task_id': widget.taskId,
+        'tool_name': widget.toolName,
+        'inspection_date': currentDate!.toIso8601String(),
+        'next_inspection_date': nextDate!.toIso8601String(),
+        'company_name': companyName,
+        'company_rep': companyRep.text.trim(),
+        'technician_name': technicianName,
+        'steps': stepsData,
+        'technician_signed': true,
+        'company_signed': true,
+        'other_notes': otherNotesController.text.trim(),
       });
+
+      // 2. Mark periodic task as done
+      // await supabase
+      //     .from('periodic_tasks')
+      //     .update({'status': 'done'})
+      //     .eq('id', widget.taskId);
+
+      // 3. Update next maintenance date
+      await supabase
+          .from('safety_tools')
+          .update({'next_maintenance_date': nextDate!.toIso8601String()})
+          .eq('name', widget.toolName);
+
+      // 4. Prepare export materials
+      final exportMaterials =
+          stepsData
+              .where(
+                (s) => s['note'] != null && s['note'].toString().isNotEmpty,
+              )
+              .map((s) => {'toolName': widget.toolName, 'note': s['note']})
+              .toList();
+
+      if (otherNotesController.text.trim().isNotEmpty) {
+        exportMaterials.add({
+          'toolName': widget.toolName,
+          'note': otherNotesController.text.trim(),
+        });
+      }
+
+      if (!mounted) return;
+
+      if (exportMaterials.isNotEmpty) {
+        final existing =
+            await supabase
+                .from('export_requests')
+                .select('id, tool_codes')
+                .eq('created_by', user.id)
+                .eq('is_approved', false)
+                .order('created_at', ascending: false)
+                .limit(1)
+                .maybeSingle();
+
+        if (existing != null) {
+          final existingId = existing['id'];
+          final List<dynamic> currentTools = existing['tool_codes'] ?? [];
+
+          final updatedTools = [...currentTools, ...exportMaterials];
+
+          await supabase
+              .from('export_requests')
+              .update({
+                'tool_codes': updatedTools,
+                'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
+              })
+              .eq('id', existingId);
+        } else {
+          await supabase.from('export_requests').insert({
+            'tool_codes': exportMaterials,
+            'created_by': user.id,
+            'created_by_name': technicianName,
+            'created_by_role': 'فني السلامة العامة',
+            'usage_reason': exportMaterials.map((m) => m['note']).join(' - '),
+            'action_taken': 'التقرير الدوري - صنبور حريق',
+            'is_approved': false,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        }
+      }
+
+      Navigator.pop(context);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير')));
+    } catch (e) {
+      print('🔥 Supabase error: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')));
     }
-
-    if (!mounted) return;
-
-    if (exportMaterials.isNotEmpty) {
-      await supabase.from('export_requests').insert({
-        'tool_code': widget.toolName,
-        'created_by': user.id,
-        'created_by_role': 'فني السلامة العامة',
-        'usage_reason': exportMaterials.map((m) => m['note']).join(' - '),
-        'action_taken': 'التقرير الدوري - صنبور حريق',
-        'covered_area': '',
-        'is_approved': false,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-    }
-
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم حفظ التقرير')),
-    );
   }
 
   @override
@@ -272,9 +326,7 @@ print('Company rep: ${companyRep.text}');
                           onChanged: (v) => setState(() => checks[step] = v!),
                         ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(step, textAlign: TextAlign.right),
-                        ),
+                        Expanded(child: Text(step, textAlign: TextAlign.right)),
                         const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.edit_note),
@@ -321,7 +373,7 @@ print('Company rep: ${companyRep.text}');
                   ),
                 ),
               ),
-    
+
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

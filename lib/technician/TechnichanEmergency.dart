@@ -106,13 +106,17 @@ class _TechnicianEmergencyLocationsPageState extends State<TechnicianEmergencyLo
         const SnackBar(content: Text('Navigate to Fire Hydrant Emergency Report')),
       );
     } else if (type == 'hose reel') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HoseReelReportPage(taskId: taskId, toolName: toolName),
-        ),
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
+Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => HoseReelReportPage(
+      taskId: task['task_id'],        // ✅ fixed here
+      toolName: task['tool_name'],    // ✅ fixed here
+      taskType: 'طارئ',
+    ),
+  ),
+);
+   ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Navigate to Hose Reel Emergency Report')),
       );
     } else {

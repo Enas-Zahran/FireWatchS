@@ -8,10 +8,12 @@ class TechnicianPeriodicLocationsPage extends StatefulWidget {
   const TechnicianPeriodicLocationsPage({super.key});
 
   @override
-  State<TechnicianPeriodicLocationsPage> createState() => _TechnicianPeriodicLocationsPageState();
+  State<TechnicianPeriodicLocationsPage> createState() =>
+      _TechnicianPeriodicLocationsPageState();
 }
 
-class _TechnicianPeriodicLocationsPageState extends State<TechnicianPeriodicLocationsPage> {
+class _TechnicianPeriodicLocationsPageState
+    extends State<TechnicianPeriodicLocationsPage> {
   bool _loading = true;
   List<Map<String, dynamic>> locations = [];
   List<Map<String, dynamic>> assignedTools = [];
@@ -34,11 +36,12 @@ class _TechnicianPeriodicLocationsPageState extends State<TechnicianPeriodicLoca
       return;
     }
 
-    final userInfo = await Supabase.instance.client
-        .from('users')
-        .select('name')
-        .eq('id', id)
-        .maybeSingle();
+    final userInfo =
+        await Supabase.instance.client
+            .from('users')
+            .select('name')
+            .eq('id', id)
+            .maybeSingle();
 
     final technicianName = userInfo?['name'] ?? 'Unknown';
 
@@ -89,40 +92,39 @@ class _TechnicianPeriodicLocationsPageState extends State<TechnicianPeriodicLoca
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => FireExtinguisherReportPage(
-            taskId: taskId,
-            toolName: toolName,
-            technicianName: technicianName,
-          ),
+          builder:
+              (context) => FireExtinguisherReportPage(
+                taskId: taskId,
+                toolName: toolName,
+                technicianName: technicianName,
+              ),
         ),
       );
-     
     } else if (type == 'fire hydrant') {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => FireHydrantReportPage(
-            taskId: taskId,
-            toolName: toolName,
-          ),
+          builder:
+              (context) =>
+                  FireHydrantReportPage(taskId: taskId, toolName: toolName),
         ),
       );
- 
     } else if (type == 'hose reel') {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => HoseReelReportPage(
-            taskId: taskId,
-            toolName: toolName,
-          ),
+          builder:
+              (_) => HoseReelReportPage(
+                taskId: tool['task_id'], // ✅ Corrected
+                toolName: tool['tool_name'],
+                taskType: 'دوري',
+              ),
         ),
       );
-   
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('نوع الأداة غير معروف: $type')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('نوع الأداة غير معروف: $type')));
     }
   }
 
@@ -142,44 +144,54 @@ class _TechnicianPeriodicLocationsPageState extends State<TechnicianPeriodicLoca
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
-                itemCount: locations.length,
-                itemBuilder: (context, index) {
-                  final loc = locations[index];
-                  final code = loc['code'] ?? '';
-                  final name = loc['name'] ?? '';
-                  final toolsInPlace = _toolsForPlace(code);
+        body:
+            _loading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 30,
+                  ),
+                  itemCount: locations.length,
+                  itemBuilder: (context, index) {
+                    final loc = locations[index];
+                    final code = loc['code'] ?? '';
+                    final name = loc['name'] ?? '';
+                    final toolsInPlace = _toolsForPlace(code);
 
-                  return Card(
-                    elevation: 3,
-                    margin: const EdgeInsets.only(bottom: 18),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    child: ExpansionTile(
-                      title: Text(
-                        '$name ($code)',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                    return Card(
+                      elevation: 3,
+                      margin: const EdgeInsets.only(bottom: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      children: toolsInPlace.isEmpty
-                          ? [
-                              const Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: Text('لا يوجد أدوات مسندة لهذا المكان'),
-                              ),
-                            ]
-                          : toolsInPlace.map((tool) {
-                              return ListTile(
-                                title: Text(tool['tool_name'] ?? ''),
-                                subtitle: Text(tool['tool_type'] ?? ''),
-                                onTap: () => _navigateToReport(context, tool),
-                              );
-                            }).toList(),
-                    ),
-                  );
-                },
-              ),
+                      child: ExpansionTile(
+                        title: Text(
+                          '$name ($code)',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        children:
+                            toolsInPlace.isEmpty
+                                ? [
+                                  const Padding(
+                                    padding: EdgeInsets.all(16.0),
+                                    child: Text(
+                                      'لا يوجد أدوات مسندة لهذا المكان',
+                                    ),
+                                  ),
+                                ]
+                                : toolsInPlace.map((tool) {
+                                  return ListTile(
+                                    title: Text(tool['tool_name'] ?? ''),
+                                    subtitle: Text(tool['tool_type'] ?? ''),
+                                    onTap:
+                                        () => _navigateToReport(context, tool),
+                                  );
+                                }).toList(),
+                      ),
+                    );
+                  },
+                ),
       ),
     );
   }

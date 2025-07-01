@@ -150,9 +150,11 @@ class FinalExportPreviewPage extends StatelessWidget {
                   style: TextStyle(color: Colors.red),
                 ),
               const SizedBox(height: 20),
-              const Text(
-                'أتعهد بإعادة المواد فور انتهاء العمل المطلوب',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Center(
+                child: const Text(
+                  'أتعهد بإعادة المواد فور انتهاء العمل المطلوب',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
