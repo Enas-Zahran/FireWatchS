@@ -53,12 +53,16 @@ class _LocationsPageState extends State<LocationsPage> {
     }
   }
 
-  void _goToAddLocation() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AddLocationPage()),
-    ).then((_) => _fetchLocations());
-  }
+ void _goToAddLocation() {
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const AddLocationPage()),
+  ).then((result) {
+    if (result == true) {
+      _fetchLocations(); // ✅ فقط لو تم الإضافة
+    }
+  });
+}
 
   void _goToEditLocation(Map<String, dynamic> location) {
     Navigator.push(

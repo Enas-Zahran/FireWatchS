@@ -41,7 +41,8 @@ class _AddLocationPageState extends State<AddLocationPage> {
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(content: Text('تمت إضافة المكان بنجاح')),
   );
-  Navigator.pop(context);
+ Navigator.pop(context, true); // ✅ يرجع قيمة true
+
 }
 
   @override

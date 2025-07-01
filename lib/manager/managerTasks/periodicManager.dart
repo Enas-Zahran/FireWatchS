@@ -366,15 +366,25 @@ class _PeriodicTasksPageState extends State<PeriodicTasksPage> {
                     }
 
                     for (final toolId in selectedToolIds) {
-                      await supabase.from('periodic_tasks').insert({
-                        'tool_id': toolId,
-                        'assigned_to': selectedTechnicianId,
-                        'assigned_by': supabase.auth.currentUser!.id,
-                        'due_date':
-                            DateTime.now()
-                                .add(const Duration(days: 6))
-                                .toIso8601String(),
-                      });
+                      final existing =
+                          await supabase
+                              .from('periodic_tasks')
+                              .select('id')
+                              .eq('tool_id', toolId)
+                              .eq('assigned_to', selectedTechnicianId!)
+                              .maybeSingle();
+
+                      if (existing == null) {
+                        await supabase.from('periodic_tasks').insert({
+                          'tool_id': toolId,
+                          'assigned_to': selectedTechnicianId,
+                          'assigned_by': supabase.auth.currentUser!.id,
+                          'due_date':
+                              DateTime.now()
+                                  .add(const Duration(days: 6))
+                                  .toIso8601String(),
+                        });
+                      }
                     }
 
                     final userData =
