@@ -96,12 +96,18 @@ class _TechnicianEmergencyLocationsPageState extends State<TechnicianEmergencyLo
         const SnackBar(content: Text('Navigate to Fire Extinguisher Emergency Report')),
       );
     } else if (type == 'fire hydrant') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => FireHydrantReportPage(taskId: taskId, toolName: toolName),
-        ),
-      );
+    Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => FireHydrantReportPage(
+      taskId: task['task_id'],         // ✅ ID الخاص بالمهمة
+      toolName: task['tool_name'],     // ✅ اسم أداة السلامة
+      taskType: 'طارئ',               // أو 'دوري' أو 'طارئ'
+    ),
+  ),
+);
+
+     
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Navigate to Fire Hydrant Emergency Report')),
       );

@@ -105,8 +105,11 @@ class _TechnicianPeriodicLocationsPageState
         context,
         MaterialPageRoute(
           builder:
-              (context) =>
-                  FireHydrantReportPage(taskId: taskId, toolName: toolName),
+              (_) => FireHydrantReportPage(
+                taskId: tool['task_id'], // ✅ Corrected
+                toolName: tool['tool_name'],
+                taskType: 'دوري',
+              ),
         ),
       );
     } else if (type == 'hose reel') {

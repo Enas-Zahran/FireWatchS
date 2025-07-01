@@ -25,8 +25,12 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
   DateTime? nextDate;
   Map<String, bool> checks = {};
   Map<String, TextEditingController> notes = {};
-  final SignatureController technicianSignature = SignatureController(penStrokeWidth: 2);
-  final SignatureController companySignature = SignatureController(penStrokeWidth: 2);
+  final SignatureController technicianSignature = SignatureController(
+    penStrokeWidth: 2,
+  );
+  final SignatureController companySignature = SignatureController(
+    penStrokeWidth: 2,
+  );
   final _formKey = GlobalKey<FormState>();
   final TextEditingController companyRep = TextEditingController();
   String? companyName;
@@ -57,19 +61,31 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
   Future<void> _fetchTechnician() async {
     final user = supabase.auth.currentUser;
     if (user != null) {
-      final data = await supabase.from('users').select('name').eq('id', user.id).maybeSingle();
+      final data =
+          await supabase
+              .from('users')
+              .select('name')
+              .eq('id', user.id)
+              .maybeSingle();
       setState(() => technicianName = data?['name']);
     }
   }
 
   Future<void> _fetchCompany() async {
     final currentYear = DateTime.now().year;
-    final data = await supabase
-        .from('contract_companies')
-        .select('company_name')
-        .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
-        .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
-        .maybeSingle();
+    final data =
+        await supabase
+            .from('contract_companies')
+            .select('company_name')
+            .gte(
+              'contract_start_date',
+              DateTime(currentYear, 1, 1).toIso8601String(),
+            )
+            .lte(
+              'contract_start_date',
+              DateTime(currentYear, 12, 31).toIso8601String(),
+            )
+            .maybeSingle();
     setState(() => companyName = data?['company_name']);
   }
 
@@ -90,7 +106,10 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
   }
 
   Future<void> _submitReport() async {
-    if (!_formKey.currentState!.validate() || currentDate == null || technicianSignature.isEmpty || companySignature.isEmpty) {
+    if (!_formKey.currentState!.validate() ||
+        currentDate == null ||
+        technicianSignature.isEmpty ||
+        companySignature.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
       );
@@ -100,11 +119,16 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
     final user = supabase.auth.currentUser;
     if (user == null) return;
 
-    final stepsData = steps.map((s) => {
-      'step': s,
-      'checked': checks[s],
-      'note': notes[s]!.text.trim(),
-    }).toList();
+    final stepsData =
+        steps
+            .map(
+              (s) => {
+                'step': s,
+                'checked': checks[s],
+                'note': notes[s]!.text.trim(),
+              },
+            )
+            .toList();
 
     try {
       final insertData = {
@@ -118,27 +142,24 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
         'technician_signed': true,
         'company_signed': true,
         'other_notes': otherNotesController.text.trim(),
+        'task_id': widget.taskId,
+        'task_type': widget.taskType,
       };
 
-      if (widget.taskType == 'دوري') {
-        insertData['task_id'] = widget.taskId;
-      }
-
       await supabase.from('hose_reel_reports').insert(insertData);
-
-      if (widget.taskType == 'دوري') {
-        await supabase.from('periodic_tasks').update({'status': 'done'}).eq('id', widget.taskId);
-      }
 
       await supabase
           .from('safety_tools')
           .update({'next_maintenance_date': nextDate!.toIso8601String()})
           .eq('name', widget.toolName);
 
-      final exportMaterials = stepsData
-          .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
-          .map((s) => {'toolName': widget.toolName, 'note': s['note']})
-          .toList();
+      final exportMaterials =
+          stepsData
+              .where(
+                (s) => s['note'] != null && s['note'].toString().isNotEmpty,
+              )
+              .map((s) => {'toolName': widget.toolName, 'note': s['note']})
+              .toList();
 
       if (otherNotesController.text.trim().isNotEmpty) {
         exportMaterials.add({
@@ -150,24 +171,28 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
       if (!mounted) return;
 
       if (exportMaterials.isNotEmpty) {
-        final existing = await supabase
-            .from('export_requests')
-            .select('id, tool_codes')
-            .eq('created_by', user.id)
-            .eq('is_approved', false)
-            .order('created_at', ascending: false)
-            .limit(1)
-            .maybeSingle();
+        final existing =
+            await supabase
+                .from('export_requests')
+                .select('id, tool_codes')
+                .eq('created_by', user.id)
+                .eq('is_approved', false)
+                .order('created_at', ascending: false)
+                .limit(1)
+                .maybeSingle();
 
         if (existing != null) {
           final existingId = existing['id'];
           final List<dynamic> currentTools = existing['tool_codes'] ?? [];
           final updatedTools = [...currentTools, ...exportMaterials];
 
-          await supabase.from('export_requests').update({
-            'tool_codes': updatedTools,
-            'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
-          }).eq('id', existingId);
+          await supabase
+              .from('export_requests')
+              .update({
+                'tool_codes': updatedTools,
+                'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
+              })
+              .eq('id', existingId);
         } else {
           await supabase.from('export_requests').insert({
             'tool_codes': exportMaterials,
@@ -183,19 +208,16 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
       }
 
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم حفظ التقرير')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير')));
     } catch (e) {
       print('🔥 Supabase error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')));
     }
   }
-
-
-
 
   @override
   void dispose() {
@@ -298,9 +320,7 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
                           onChanged: (v) => setState(() => checks[step] = v!),
                         ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(step, textAlign: TextAlign.right),
-                        ),
+                        Expanded(child: Text(step, textAlign: TextAlign.right)),
                         const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.edit_note),
@@ -346,7 +366,7 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
                   ),
                 ),
               ),
-    
+
               const SizedBox(height: 16),
               Card(
                 shape: RoundedRectangleBorder(
