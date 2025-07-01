@@ -126,27 +126,30 @@ class _PendingApprovalsPageState extends State<PendingApprovalsPage> {
                                 final confirm = await showDialog<bool>(
                                   context: context,
                                   builder:
-                                      (context) => AlertDialog(
-                                        title: const Text('تأكيد الحذف'),
-                                        content: const Text(
-                                          'هل أنت متأكد من حذف هذا المستخدم؟',
+                                      (context) => Directionality(
+                                        textDirection: TextDirection.rtl,
+                                        child: AlertDialog(
+                                          title: const Text('تأكيد الحذف'),
+                                          content: const Text(
+                                            'هل أنت متأكد من حذف هذا المستخدم؟',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed:
+                                                  () => Navigator.of(
+                                                    context,
+                                                  ).pop(false),
+                                              child: const Text('إلغاء'),
+                                            ),
+                                            TextButton(
+                                              onPressed:
+                                                  () => Navigator.of(
+                                                    context,
+                                                  ).pop(true),
+                                              child: const Text('نعم'),
+                                            ),
+                                          ],
                                         ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed:
-                                                () => Navigator.of(
-                                                  context,
-                                                ).pop(false),
-                                            child: const Text('إلغاء'),
-                                          ),
-                                          TextButton(
-                                            onPressed:
-                                                () => Navigator.of(
-                                                  context,
-                                                ).pop(true),
-                                            child: const Text('نعم'),
-                                          ),
-                                        ],
                                       ),
                                 );
 

@@ -228,7 +228,7 @@ class _MaterialExitAuthorizationPageState
             children: [
               const Center(
                 child: Text(
-                  'جامعة العلوم والتكنولوجيا الأردنية / دائرة السلامة',
+                  'جامعة العلوم والتكنولوجيا الاردنية / دائرة السلامة والصحة المهنية والبيئية',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                 ),
               ),

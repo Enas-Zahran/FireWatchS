@@ -4,10 +4,9 @@ import 'package:FireWatch/My/InputDecoration.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/toolDetails.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/addSafteyTool.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/editSafteyTool.dart';
-import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/Permessions/exportRequests.dart';
-import 'package:FireWatch/technician/MaterialExit.dart';
 
-//Todo السعر لازم يتغير تلقائي حسب النوع
+import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/Permessions/allExportRequests.dart';
+
 class AllToolsPage extends StatefulWidget {
   @override
   State<AllToolsPage> createState() => _AllToolsPageState();
@@ -42,8 +41,7 @@ class _AllToolsPageState extends State<AllToolsPage> {
     final data = await Supabase.instance.client
         .from('export_requests')
         .select()
-        .eq('status', 'pending');
-
+        .eq('is_approved', false);
     setState(() {
       _hasPendingRequests = data.isNotEmpty;
     });
@@ -138,84 +136,18 @@ class _AllToolsPageState extends State<AllToolsPage> {
                 ],
               ),
               onPressed: () async {
-                //                 if (userRole == 'فني السلامة العامة') {
-                //                   final extinguisherReports = await Supabase.instance.client
-                //                       .from('fire_extinguisher_reports')
-                //                       .select('tool_name, steps, other_notes')
-                //                       .eq('technician_name', technicianName ?? '');
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AllExportRequestsPage(),
+                  ),
+                );
 
-                //                   final hydrantReports = await Supabase.instance.client
-                //                       .from('fire_hydrant_reports')
-                //                       .select('tool_name, steps, other_notes')
-                //                       .eq('technician_name', technicianName ?? '');
+                if (result == true) {
+                  await _fetchTools(); 
+                }
 
-                //                   final hoseReelReports = await Supabase.instance.client
-                //                       .from('hose_reel_reports')
-                //                       .select('tool_name, steps, other_notes')
-                //                       .eq('technician_name', technicianName ?? '');
-
-                //                   final allReports = [
-                //                     ...extinguisherReports,
-                //                     ...hydrantReports,
-                //                     ...hoseReelReports,
-                //                   ];
-                //                   final List<Map<String, dynamic>> materialsToExport = [];
-
-                //                   for (var report in allReports) {
-                //                     final tool = report['tool_name'];
-                //                     final steps = List<Map<String, dynamic>>.from(
-                //                       report['steps'] ?? [],
-                //                     );
-                //                     for (var step in steps) {
-                //                       final note = step['note']?.toString().trim();
-                //                       if (note != null && note.isNotEmpty) {
-                //                         materialsToExport.add({'toolName': tool, 'note': note});
-                //                       }
-                //                     }
-                //                     final otherNote = report['other_notes']?.toString().trim();
-                //                     if (otherNote != null && otherNote.isNotEmpty) {
-                //                       materialsToExport.add({
-                //                         'toolName': tool,
-                //                         'note': otherNote,
-                //                       });
-                //                     }
-                //                   }
-
-                //                   if (materialsToExport.isEmpty) {
-                //                     ScaffoldMessenger.of(context).showSnackBar(
-                //                       const SnackBar(
-                //                         content: Text('لا يوجد أدوات تحتوي على ملاحظات'),
-                //                       ),
-                //                     );
-                //                     return;
-                //                   }
-
-                //                   final reasonText = materialsToExport
-                //                       .map((e) => e['note'])
-                //                       .join(' - ');
-
-                //                   Navigator.push(
-                //                     context,
-                //                     MaterialPageRoute(
-                //                       builder:
-                //                           (_) => MaterialExitAuthorizationPage(
-
-                //                           ),
-                //                     ),
-                //                   );
-                //                } else {
-                //   final result = await
-                // //   Navigator.push(
-                // //   context,
-                // //   MaterialPageRoute(
-                // //     builder: (_) => ExportRequestMaterialsPage(
-
-                // //     ),
-                // //   ),
-                // // );
-
-                //   if (result == true) _checkPendingRequests();
-                // }
+                await _checkPendingRequests();
               },
             ),
           ],
@@ -316,7 +248,9 @@ class _AllToolsPageState extends State<AllToolsPage> {
                                                           (
                                                             context,
                                                           ) => Directionality(
-                                                            textDirection: TextDirection.rtl,
+                                                            textDirection:
+                                                                TextDirection
+                                                                    .rtl,
                                                             child: AlertDialog(
                                                               title: const Text(
                                                                 'تأكيد الحذف',

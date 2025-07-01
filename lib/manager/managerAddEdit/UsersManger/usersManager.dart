@@ -362,33 +362,36 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
                                           >(
                                             context: context,
                                             builder:
-                                                (context) => AlertDialog(
-                                                  title: const Text(
-                                                    'تأكيد الحذف',
-                                                  ),
-                                                  content: const Text(
-                                                    'هل أنت متأكد من حذف هذا المستخدم؟',
-                                                  ),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed:
-                                                          () => Navigator.pop(
-                                                            context,
-                                                            false,
-                                                          ),
-                                                      child: const Text(
-                                                        'إلغاء',
+                                                (context) => Directionality(
+                                                  textDirection: TextDirection.rtl,
+                                                  child: AlertDialog(
+                                                    title: const Text(
+                                                      'تأكيد الحذف',
+                                                    ),
+                                                    content: const Text(
+                                                      'هل أنت متأكد من حذف هذا المستخدم؟',
+                                                    ),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed:
+                                                            () => Navigator.pop(
+                                                              context,
+                                                              false,
+                                                            ),
+                                                        child: const Text(
+                                                          'إلغاء',
+                                                        ),
                                                       ),
-                                                    ),
-                                                    TextButton(
-                                                      onPressed:
-                                                          () => Navigator.pop(
-                                                            context,
-                                                            true,
-                                                          ),
-                                                      child: const Text('نعم'),
-                                                    ),
-                                                  ],
+                                                      TextButton(
+                                                        onPressed:
+                                                            () => Navigator.pop(
+                                                              context,
+                                                              true,
+                                                            ),
+                                                        child: const Text('نعم'),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                           );
                                           if (confirm == true) {
