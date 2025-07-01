@@ -29,6 +29,8 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   flutter_typeahead: ^4.3.7
+  printing: ^5.11.0
+  pdf: ^3.10.4
 
 
   flutter:

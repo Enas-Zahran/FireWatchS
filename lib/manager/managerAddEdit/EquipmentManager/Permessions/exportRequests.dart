@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'dart:ui' as ui;
 import 'package:FireWatch/My/InputDecoration.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 
 class ExportRequestMaterialsPage extends StatefulWidget {
   final String requestId;
@@ -46,12 +47,11 @@ class _ExportRequestMaterialsPageState
   }
 
   Future<void> _fetchRequest() async {
-    final data =
-        await supabase
-            .from('export_requests')
-            .select()
-            .eq('id', widget.requestId)
-            .maybeSingle();
+    final data = await supabase
+        .from('export_requests')
+        .select()
+        .eq('id', widget.requestId)
+        .maybeSingle();
 
     if (data != null) {
       setState(() {
@@ -93,6 +93,12 @@ class _ExportRequestMaterialsPageState
     }
 
     final signatureBytes = await managerSignature.toPngBytes();
+    if (signatureBytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('خطأ في توقيع المدير')),
+      );
+      return;
+    }
 
     await supabase
         .from('export_requests')
@@ -103,7 +109,8 @@ class _ExportRequestMaterialsPageState
           'return_date': (returnDate ?? DateTime.now()).toIso8601String(),
           'material_type': materialType,
           'is_approved': true,
-          'manager_signature': signatureBytes,
+          'manager_signature': base64Encode(signatureBytes),
+           'approved_at': DateTime.now().toIso8601String(), 
         })
         .eq('id', widget.requestId);
 
@@ -117,25 +124,23 @@ class _ExportRequestMaterialsPageState
   Future<void> _rejectRequest() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => Directionality(
-            textDirection: ui.TextDirection.rtl,
-            child: AlertDialog(
-              title: const Text('تأكيد الرفض'),
-              content: const Text('هل أنت متأكد أنك تريد رفض هذا الطلب؟'),
-              actions: [
-                 TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('رفض'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('إلغاء'),
-                ),
-               
-              ],
+      builder: (context) => Directionality(
+        textDirection: ui.TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('تأكيد الرفض'),
+          content: const Text('هل أنت متأكد أنك تريد رفض هذا الطلب؟'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('رفض'),
             ),
-          ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('إلغاء'),
+            ),
+          ],
+        ),
+      ),
     );
 
     if (confirm != true) return;
@@ -158,225 +163,199 @@ class _ExportRequestMaterialsPageState
       textDirection: ui.TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: Center(
-            child: const Text(
+          title: const Center(
+            child: Text(
               'تفاصيل طلب الإخراج',
               style: TextStyle(color: Colors.white),
             ),
           ),
           backgroundColor: const Color(0xff00408b),
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body:
-            loading
-                ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Center(
-                        child: Text(
-                          'جامعة العلوم والتكنولوجيا الأردنية / دائرة السلامة والصحة المهنية والبيئية',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                          ),
+        body: loading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Center(
+                      child: Text(
+                        'جامعة العلوم والتكنولوجيا الأردنية / دائرة السلامة والصحة المهنية والبيئية',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'اليوم: $dayName',
-                              style: const TextStyle(fontSize: 18),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              'التاريخ: $todayFormatted',
-                              style: const TextStyle(fontSize: 18),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'اسم الموظف: ${widget.technicianName}',
-                        style: const TextStyle(fontSize: 18),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _vehicleOwnerController,
-                        decoration: customInputDecoration.copyWith(
-                          labelText: 'اسم السائق',
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text('اليوم: $dayName',
+                              style: const TextStyle(fontSize: 18)),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        controller: _vehicleNumberController,
-                        decoration: customInputDecoration.copyWith(
-                          labelText: 'رقم المركبة',
+                        Expanded(
+                          child: Text('التاريخ: $todayFormatted',
+                              style: const TextStyle(fontSize: 18)),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text('اسم الموظف: ${widget.technicianName}',
+                        style: const TextStyle(fontSize: 18)),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _vehicleOwnerController,
+                      decoration: customInputDecoration.copyWith(
+                        labelText: 'اسم السائق',
                       ),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        controller: _vehicleTypeController,
-                        decoration: customInputDecoration.copyWith(
-                          labelText: 'نوع المركبة',
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _vehicleNumberController,
+                      decoration: customInputDecoration.copyWith(
+                        labelText: 'رقم المركبة',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _vehicleTypeController,
+                      decoration: customInputDecoration.copyWith(
+                        labelText: 'نوع المركبة',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      value: materialType,
+                      decoration: customInputDecoration.copyWith(
+                        labelText: 'نوع المواد',
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'مقتنيات شخصية',
+                          child: Text('مقتنيات شخصية'),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      DropdownButtonFormField<String>(
-                        value: materialType,
-                        decoration: customInputDecoration.copyWith(
-                          labelText: 'نوع المواد',
+                        DropdownMenuItem(
+                          value: 'مقتنيات جامعية',
+                          child: Text('مقتنيات جامعية'),
                         ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'مقتنيات شخصية',
-                            child: Text('مقتنيات شخصية'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'مقتنيات جامعية',
-                            child: Text('مقتنيات جامعية'),
-                          ),
-                        ],
-                        onChanged: (val) => setState(() => materialType = val!),
+                      ],
+                      onChanged: (val) => setState(() => materialType = val!),
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _returnDateController,
+                      readOnly: true,
+                      onTap: _pickReturnDate,
+                      decoration: customInputDecoration.copyWith(
+                        labelText: 'تاريخ الإرجاع',
                       ),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        controller: _returnDateController,
-                        readOnly: true,
-                        onTap: _pickReturnDate,
-                        decoration: customInputDecoration.copyWith(
-                          labelText: 'تاريخ الإرجاع',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'المواد المطلوبة:',
-                        style: TextStyle(fontSize: 18),
-                      ),
-                      const SizedBox(height: 8),
-                      ...(request?['tool_codes'] as List<dynamic>? ?? [])
-                          .asMap()
-                          .entries
-                          .map((entry) {
-                            final i = entry.key;
-                            final item = entry.value;
-
-                            return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 6),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: Column(
-                                  children: [
-                                    TextFormField(
-                                      initialValue: item['toolName'],
-                                      decoration: const InputDecoration(
-                                        labelText: 'اسم الأداة',
-                                      ),
-                                      onChanged: (val) {
-                                        setState(() {
-                                          request!['tool_codes'][i]['toolName'] =
-                                              val;
-                                        });
-                                      },
-                                    ),
-                                    const SizedBox(height: 8),
-                                    TextFormField(
-                                      initialValue: item['note'],
-                                      decoration: const InputDecoration(
-                                        labelText: 'السبب',
-                                      ),
-                                      onChanged: (val) {
-                                        setState(() {
-                                          request!['tool_codes'][i]['note'] =
-                                              val;
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('المواد المطلوبة:',
+                        style: TextStyle(fontSize: 18)),
+                    const SizedBox(height: 8),
+                    ...(request?['tool_codes'] as List<dynamic>? ?? [])
+                        .asMap()
+                        .entries
+                        .map((entry) {
+                      final i = entry.key;
+                      final item = entry.value;
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            children: [
+                              TextFormField(
+                                initialValue: item['toolName'],
+                                decoration:
+                                    const InputDecoration(labelText: 'اسم الأداة'),
+                                onChanged: (val) {
+                                  setState(() {
+                                    request!['tool_codes'][i]['toolName'] = val;
+                                  });
+                                },
                               ),
-                            );
-                          })
-                          .toList(),
-                      Text(
-                        'اسم الموظف: ${widget.technicianName}',
-                        style: const TextStyle(fontSize: 18),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'توقيع الموظف:',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 8),
-                      if (request?['technician_signature'] != null)
-                        Image.memory(
-                          const Base64Decoder().convert(
-                            request!['technician_signature'],
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                initialValue: item['note'],
+                                decoration:
+                                    const InputDecoration(labelText: 'السبب'),
+                                onChanged: (val) {
+                                  setState(() {
+                                    request!['tool_codes'][i]['note'] = val;
+                                  });
+                                },
+                              ),
+                            ],
                           ),
-                          height: 100,
-                          fit: BoxFit.contain,
-                        )
-                      else
-                        const Text(
-                          'لا يوجد توقيع',
-                          style: TextStyle(color: Colors.red),
                         ),
-
-                      const SizedBox(height: 20),
-                      const Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          'توقيع المدير:',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      Signature(
-                        controller: managerSignature,
+                      );
+                    }).toList(),
+                    Text('اسم الموظف: ${widget.technicianName}',
+                        style: const TextStyle(fontSize: 18)),
+                    const SizedBox(height: 8),
+                    const Text('توقيع الموظف:',
+                        style: TextStyle(fontSize: 16)),
+                    const SizedBox(height: 8),
+                    if (request?['technician_signature'] != null)
+                      Image.memory(
+                        base64Decode(request!['technician_signature']),
                         height: 100,
-                        backgroundColor: Colors.grey[300]!,
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: _approveRequest,
-                            icon: const Icon(Icons.check),
-                            label: const Text('اعتماد الطلب'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xff00408b),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 12,
-                              ),
+                        fit: BoxFit.contain,
+                      )
+                    else
+                      const Text('لا يوجد توقيع',
+                          style: TextStyle(color: Colors.red)),
+                    const SizedBox(height: 20),
+                    const Align(
+                      alignment: Alignment.centerRight,
+                      child:
+                          Text('توقيع المدير:', style: TextStyle(fontSize: 16)),
+                    ),
+                    Signature(
+                      controller: managerSignature,
+                      height: 100,
+                      backgroundColor: Colors.grey[300]!,
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _approveRequest,
+                          icon: const Icon(Icons.check),
+                          label: const Text('اعتماد الطلب'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xff00408b),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          ElevatedButton.icon(
-                            onPressed: _rejectRequest,
-                            icon: const Icon(Icons.close),
-                            label: const Text('رفض الطلب'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red[800],
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 12,
-                              ),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton.icon(
+                          onPressed: _rejectRequest,
+                          icon: const Icon(Icons.close),
+                          label: const Text('رفض الطلب'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red[800],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
                             ),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
+              ),
       ),
     );
   }
