@@ -150,8 +150,29 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
 
       await supabase
           .from('safety_tools')
-          .update({'next_maintenance_date': nextDate!.toIso8601String()})
+          .update({
+            'last_maintenance_date': currentDate!.toIso8601String(),
+            'next_maintenance_date': nextDate!.toIso8601String(),
+          })
           .eq('name', widget.toolName);
+
+      // ✅ Mark task as done
+      if (widget.taskType == 'دوري') {
+        await supabase
+            .from('periodic_tasks')
+            .update({'status': 'done'})
+            .eq('id', widget.taskId);
+      } else if (widget.taskType == 'علاجي') {
+        await supabase
+            .from('corrective_tasks')
+            .update({'status': 'done'})
+            .eq('id', widget.taskId);
+      } else if (widget.taskType == 'طارئ') {
+        await supabase
+            .from('emergency_tasks')
+            .update({'status': 'done'})
+            .eq('id', widget.taskId);
+      }
 
       final exportMaterials =
           stepsData

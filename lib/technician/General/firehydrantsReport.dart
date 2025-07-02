@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:signature/signature.dart';
 import 'package:intl/intl.dart';
-
+//Todo: update the next and last maintenacance date for each one 
 class FireHydrantReportPage extends StatefulWidget {
   final String taskId;
   final String toolName;
@@ -25,8 +25,12 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
   DateTime? nextDate;
   Map<String, bool> checks = {};
   Map<String, TextEditingController> notes = {};
-  final SignatureController technicianSignature = SignatureController(penStrokeWidth: 2);
-  final SignatureController companySignature = SignatureController(penStrokeWidth: 2);
+  final SignatureController technicianSignature = SignatureController(
+    penStrokeWidth: 2,
+  );
+  final SignatureController companySignature = SignatureController(
+    penStrokeWidth: 2,
+  );
   final _formKey = GlobalKey<FormState>();
   final TextEditingController companyRep = TextEditingController();
   String? companyName;
@@ -58,19 +62,31 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
   Future<void> _fetchTechnician() async {
     final user = supabase.auth.currentUser;
     if (user != null) {
-      final data = await supabase.from('users').select('name').eq('id', user.id).maybeSingle();
+      final data =
+          await supabase
+              .from('users')
+              .select('name')
+              .eq('id', user.id)
+              .maybeSingle();
       setState(() => technicianName = data?['name']);
     }
   }
 
   Future<void> _fetchCompany() async {
     final currentYear = DateTime.now().year;
-    final data = await supabase
-        .from('contract_companies')
-        .select('company_name')
-        .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
-        .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
-        .maybeSingle();
+    final data =
+        await supabase
+            .from('contract_companies')
+            .select('company_name')
+            .gte(
+              'contract_start_date',
+              DateTime(currentYear, 1, 1).toIso8601String(),
+            )
+            .lte(
+              'contract_start_date',
+              DateTime(currentYear, 12, 31).toIso8601String(),
+            )
+            .maybeSingle();
     setState(() => companyName = data?['company_name']);
   }
 
@@ -90,8 +106,22 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
     }
   }
 
+  Future<String?> _fetchToolIdByName(String name) async {
+    final result =
+        await supabase
+            .from('safety_tools')
+            .select('id')
+            .eq('name', name)
+            .maybeSingle();
+
+    return result != null ? result['id'] as String : null;
+  }
+
   Future<void> _submitReport() async {
-    if (!_formKey.currentState!.validate() || currentDate == null || technicianSignature.isEmpty || companySignature.isEmpty) {
+    if (!_formKey.currentState!.validate() ||
+        currentDate == null ||
+        technicianSignature.isEmpty ||
+        companySignature.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
       );
@@ -101,11 +131,16 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
     final user = supabase.auth.currentUser;
     if (user == null) return;
 
-    final stepsData = steps.map((s) => {
-      'step': s,
-      'checked': checks[s],
-      'note': notes[s]!.text.trim(),
-    }).toList();
+    final stepsData =
+        steps
+            .map(
+              (s) => {
+                'step': s,
+                'checked': checks[s],
+                'note': notes[s]!.text.trim(),
+              },
+            )
+            .toList();
 
     try {
       final insertData = {
@@ -124,16 +159,51 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
       };
 
       await supabase.from('fire_hydrant_reports').insert(insertData);
+      final toolId = await _fetchToolIdByName(widget.toolName);
 
-      await supabase
-          .from('safety_tools')
-          .update({'next_maintenance_date': nextDate!.toIso8601String()})
-          .eq('name', widget.toolName);
+      if (toolId != null) {
+        await supabase
+            .from('safety_tools')
+            .update({
+              'last_maintenance_date': DateFormat(
+                'yyyy-MM-dd',
+              ).format(currentDate!),
+              'next_maintenance_date': DateFormat(
+                'yyyy-MM-dd',
+              ).format(nextDate!),
+            })
+            .eq('id', toolId);
+      } else {
+        print('❌ Tool ID not found for ${widget.toolName}');
+      }
+print('📦 Updating toolId: $toolId');
 
-      final exportMaterials = stepsData
-          .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
-          .map((s) => {'toolName': widget.toolName, 'note': s['note']})
-          .toList();
+
+      // ✅ Mark task as done based on task type
+      if (widget.taskType == 'دوري') {
+        await supabase
+            .from('periodic_tasks')
+            .update({'status': 'done'})
+            .eq('id', widget.taskId);
+      } else if (widget.taskType == 'علاجي') {
+        await supabase
+            .from('corrective_tasks')
+            .update({'status': 'done'})
+            .eq('id', widget.taskId);
+      } else if (widget.taskType == 'طارئ') {
+        await supabase
+            .from('emergency_tasks')
+            .update({'status': 'done'})
+            .eq('id', widget.taskId);
+      }
+
+      final exportMaterials =
+          stepsData
+              .where(
+                (s) => s['note'] != null && s['note'].toString().isNotEmpty,
+              )
+              .map((s) => {'toolName': widget.toolName, 'note': s['note']})
+              .toList();
 
       if (otherNotesController.text.trim().isNotEmpty) {
         exportMaterials.add({
@@ -145,24 +215,28 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
       if (!mounted) return;
 
       if (exportMaterials.isNotEmpty) {
-        final existing = await supabase
-            .from('export_requests')
-            .select('id, tool_codes')
-            .eq('created_by', user.id)
-            .eq('is_approved', false)
-            .order('created_at', ascending: false)
-            .limit(1)
-            .maybeSingle();
+        final existing =
+            await supabase
+                .from('export_requests')
+                .select('id, tool_codes')
+                .eq('created_by', user.id)
+                .eq('is_approved', false)
+                .order('created_at', ascending: false)
+                .limit(1)
+                .maybeSingle();
 
         if (existing != null) {
           final existingId = existing['id'];
           final List<dynamic> currentTools = existing['tool_codes'] ?? [];
           final updatedTools = [...currentTools, ...exportMaterials];
 
-          await supabase.from('export_requests').update({
-            'tool_codes': updatedTools,
-            'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
-          }).eq('id', existingId);
+          await supabase
+              .from('export_requests')
+              .update({
+                'tool_codes': updatedTools,
+                'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
+              })
+              .eq('id', existingId);
         } else {
           await supabase.from('export_requests').insert({
             'tool_codes': exportMaterials,
@@ -178,14 +252,14 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
       }
 
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم حفظ التقرير')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير')));
     } catch (e) {
       print('🔥 Supabase error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')));
     }
   }
 

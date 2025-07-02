@@ -153,10 +153,14 @@ Future<void> _submitReport() async {
         .eq('id', widget.taskId);
 
     // 3. Update next maintenance date
-    await supabase
-        .from('safety_tools')
-        .update({'next_maintenance_date': nextDate!.toIso8601String()})
-        .eq('name', widget.toolName);
+ await supabase
+    .from('safety_tools')
+    .update({
+      'last_maintenance_date': currentDate!.toIso8601String(),
+      'next_maintenance_date': nextDate!.toIso8601String(),
+    })
+    .eq('name', widget.toolName);
+
 
     // 4. Prepare export materials
     final exportMaterials = stepsData

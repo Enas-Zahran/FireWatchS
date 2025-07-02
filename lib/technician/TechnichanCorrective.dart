@@ -51,7 +51,9 @@ class _TechnicianCorrectiveLocationsPageState
 
     final tasksResult = await Supabase.instance.client
         .from('corrective_tasks')
-        .select('id, tool_id, assigned_to, safety_tools(id, name, type)')
+        .select(
+          'id, tool_id, status, assigned_to, safety_tools(id, name, type)',
+        )
         .eq('assigned_to', id);
 
     List<Map<String, dynamic>> correctiveTasks = [];
@@ -63,6 +65,7 @@ class _TechnicianCorrectiveLocationsPageState
           'tool_name': t['safety_tools']['name'],
           'tool_type': t['safety_tools']['type'],
           'technician_name': technicianName,
+          'status': t['status'],
         });
       }
     }
@@ -82,14 +85,17 @@ class _TechnicianCorrectiveLocationsPageState
     }).toList();
   }
 
-  void _navigateToReport(BuildContext context, Map<String, dynamic> task) {
+  void _navigateToReport(
+    BuildContext context,
+    Map<String, dynamic> task,
+  ) async {
     final type = task['tool_type']?.toString().toLowerCase();
     final taskId = task['task_id'];
     final toolName = task['tool_name'];
     final technicianName = task['technician_name'];
 
     if (type == 'fire extinguisher') {
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder:
@@ -100,52 +106,33 @@ class _TechnicianCorrectiveLocationsPageState
               ),
         ),
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Navigate to Fire Extinguisher Corrective Report'),
-        ),
-      );
     } else if (type == 'fire hydrant') {
-Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => FireHydrantReportPage(
-      taskId: task['task_id'],         // ✅ ID الخاص بالمهمة
-      toolName: task['tool_name'],     // ✅ اسم أداة السلامة
-      taskType: 'علاجي',               // أو 'دوري' أو 'طارئ'
-    ),
-  ),
-);
-
-     
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Navigate to Fire Hydrant Corrective Report'),
-        ),
-      );
-    } else if (type == 'hose reel') {
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder:
-              (_) => HoseReelReportPage(
-                taskId: task['task_id'], // ✅ fixed here
-                toolName: task['tool_name'], // ✅ fixed here
+              (_) => FireHydrantReportPage(
+                taskId: taskId,
+                toolName: toolName,
                 taskType: 'علاجي',
               ),
         ),
       );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Navigate to Hose Reel Corrective Report'),
+    } else if (type == 'hose reel') {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (_) => HoseReelReportPage(
+                taskId: taskId,
+                toolName: toolName,
+                taskType: 'علاجي',
+              ),
         ),
       );
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('نوع الأداة غير معروف: $type')));
     }
+
+    await _loadData();
   }
 
   @override
@@ -178,6 +165,8 @@ Navigator.push(
                     final code = loc['code'] ?? '';
                     final name = loc['name'] ?? '';
                     final tasksInPlace = _tasksForPlace(code);
+                    final remainingTasks =
+                        tasksInPlace.where((e) => e['status'] != 'done').length;
 
                     return Card(
                       elevation: 3,
@@ -187,7 +176,7 @@ Navigator.push(
                       ),
                       child: ExpansionTile(
                         title: Text(
-                          '$name ($code)',
+                          '$name ($code) - $remainingTasks مهام',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         children:
@@ -201,8 +190,16 @@ Navigator.push(
                                   ),
                                 ]
                                 : tasksInPlace.map((task) {
+                                  final isDone = task['status'] == 'done';
                                   return ListTile(
-                                    title: Text(task['tool_name'] ?? ''),
+                                    title: Text(
+                                      task['tool_name'] ?? '',
+                                      style: TextStyle(
+                                        color: isDone ? Colors.green : null,
+                                        fontWeight:
+                                            isDone ? FontWeight.bold : null,
+                                      ),
+                                    ),
                                     subtitle: Text(task['tool_type'] ?? ''),
                                     onTap:
                                         () => _navigateToReport(context, task),

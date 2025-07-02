@@ -16,7 +16,7 @@ class _TechnicianPeriodicLocationsPageState
     extends State<TechnicianPeriodicLocationsPage> {
   bool _loading = true;
   List<Map<String, dynamic>> locations = [];
-  List<Map<String, dynamic>> assignedTools = [];
+  List<Map<String, dynamic>> assignedTasks = [];
   String? userId;
 
   @override
@@ -49,47 +49,53 @@ class _TechnicianPeriodicLocationsPageState
         .from('locations')
         .select('id, name, code');
 
-    final toolsResult = await Supabase.instance.client
+    final tasksResult = await Supabase.instance.client
         .from('periodic_tasks')
-        .select('id, tool_id, assigned_to, safety_tools(id, name, type)')
+        .select(
+          'id, tool_id, status, assigned_to, safety_tools(id, name, type)',
+        )
         .eq('assigned_to', id);
 
-    List<Map<String, dynamic>> periodicTools = [];
-    for (final t in toolsResult) {
+    List<Map<String, dynamic>> periodicTasks = [];
+    for (final t in tasksResult) {
       if (t['safety_tools'] != null) {
-        periodicTools.add({
+        periodicTasks.add({
           'task_id': t['id'],
           'tool_id': t['tool_id'],
           'tool_name': t['safety_tools']['name'],
           'tool_type': t['safety_tools']['type'],
           'technician_name': technicianName,
+          'status': t['status'],
         });
       }
     }
 
     setState(() {
       locations = List<Map<String, dynamic>>.from(locs);
-      assignedTools = periodicTools;
+      assignedTasks = periodicTasks;
       userId = id;
       _loading = false;
     });
   }
 
-  List<Map<String, dynamic>> _toolsForPlace(String code) {
-    return assignedTools.where((tool) {
-      final name = tool['tool_name'] ?? '';
+  List<Map<String, dynamic>> _tasksForPlace(String code) {
+    return assignedTasks.where((task) {
+      final name = task['tool_name'] ?? '';
       return name.isNotEmpty && name[0].toUpperCase() == code.toUpperCase();
     }).toList();
   }
 
-  void _navigateToReport(BuildContext context, Map<String, dynamic> tool) {
-    final type = tool['tool_type']?.toString().toLowerCase();
-    final taskId = tool['task_id'];
-    final toolName = tool['tool_name'];
-    final technicianName = tool['technician_name'];
+  void _navigateToReport(
+    BuildContext context,
+    Map<String, dynamic> task,
+  ) async {
+    final type = task['tool_type']?.toString().toLowerCase();
+    final taskId = task['task_id'];
+    final toolName = task['tool_name'];
+    final technicianName = task['technician_name'];
 
     if (type == 'fire extinguisher') {
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder:
@@ -101,34 +107,32 @@ class _TechnicianPeriodicLocationsPageState
         ),
       );
     } else if (type == 'fire hydrant') {
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder:
               (_) => FireHydrantReportPage(
-                taskId: tool['task_id'], // ✅ Corrected
-                toolName: tool['tool_name'],
+                taskId: taskId,
+                toolName: toolName,
                 taskType: 'دوري',
               ),
         ),
       );
     } else if (type == 'hose reel') {
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder:
               (_) => HoseReelReportPage(
-                taskId: tool['task_id'], // ✅ Corrected
-                toolName: tool['tool_name'],
+                taskId: taskId,
+                toolName: toolName,
                 taskType: 'دوري',
               ),
         ),
       );
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('نوع الأداة غير معروف: $type')));
     }
+
+    await _loadData();
   }
 
   @override
@@ -160,7 +164,9 @@ class _TechnicianPeriodicLocationsPageState
                     final loc = locations[index];
                     final code = loc['code'] ?? '';
                     final name = loc['name'] ?? '';
-                    final toolsInPlace = _toolsForPlace(code);
+                    final tasksInPlace = _tasksForPlace(code);
+                    final remainingTasks =
+                        tasksInPlace.where((e) => e['status'] != 'done').length;
 
                     return Card(
                       elevation: 3,
@@ -170,11 +176,11 @@ class _TechnicianPeriodicLocationsPageState
                       ),
                       child: ExpansionTile(
                         title: Text(
-                          '$name ($code)',
+                          '$name ($code) - $remainingTasks مهام',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         children:
-                            toolsInPlace.isEmpty
+                            tasksInPlace.isEmpty
                                 ? [
                                   const Padding(
                                     padding: EdgeInsets.all(16.0),
@@ -183,12 +189,20 @@ class _TechnicianPeriodicLocationsPageState
                                     ),
                                   ),
                                 ]
-                                : toolsInPlace.map((tool) {
+                                : tasksInPlace.map((task) {
+                                  final isDone = task['status'] == 'done';
                                   return ListTile(
-                                    title: Text(tool['tool_name'] ?? ''),
-                                    subtitle: Text(tool['tool_type'] ?? ''),
+                                    title: Text(
+                                      task['tool_name'] ?? '',
+                                      style: TextStyle(
+                                        color: isDone ? Colors.green : null,
+                                        fontWeight:
+                                            isDone ? FontWeight.bold : null,
+                                      ),
+                                    ),
+                                    subtitle: Text(task['tool_type'] ?? ''),
                                     onTap:
-                                        () => _navigateToReport(context, tool),
+                                        () => _navigateToReport(context, task),
                                   );
                                 }).toList(),
                       ),
