@@ -12,74 +12,35 @@ class EmergencyTasksPage extends StatefulWidget {
 
 class _EmergencyTasksPageState extends State<EmergencyTasksPage> {
   final supabase = Supabase.instance.client;
-
-  final TextEditingController _techSearchController = TextEditingController();
   final TextEditingController _toolSearchController = TextEditingController();
 
-  String? selectedTechnicianId;
-  String? selectedTechnicianName;
-  List<Map<String, dynamic>> technicians = [];
   List<Map<String, dynamic>> requests = [];
   List<Map<String, dynamic>> locations = [];
-  List<String> selectedRequestIds = [];
   List<Map<String, dynamic>> assignments = [];
   Map<String, int> taskCounts = {};
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchLocations().then((_) async {
-      await _fetchTaskCounts();
-      _fetchTechnicians();
-      _fetchRequests();
-    });
+    _loadInitialData();
   }
 
-  Future<void> _fetchTaskCounts() async {
-    final periodic = await supabase
-        .from('periodic_tasks')
-        .select('assigned_to');
-    final corrective = await supabase
-        .from('corrective_tasks')
-        .select('assigned_to');
-    final emergency = await supabase
-        .from('emergency_tasks')
-        .select('assigned_to');
-
-    final all = [...periodic, ...corrective, ...emergency];
-    final counts = <String, int>{};
-    for (final task in all) {
-      final id = task['assigned_to'];
-      if (id != null) {
-        counts[id] = (counts[id] ?? 0) + 1;
-      }
+  Future<void> _loadInitialData() async {
+    setState(() => _isLoading = true);
+    try {
+      await _fetchLocations();
+      await _fetchRequests();
+    } catch (e) {
+      _showErrorSnackbar('فشل في تحميل البيانات: ${e.toString()}');
+    } finally {
+      setState(() => _isLoading = false);
     }
-    setState(() => taskCounts = counts);
   }
 
   Future<void> _fetchLocations() async {
     final response = await supabase.from('locations').select('id, name, code');
     locations = List<Map<String, dynamic>>.from(response);
-  }
-
-  Future<void> _fetchTechnicians() async {
-    final response = await supabase
-        .from('users')
-        .select('id, name')
-        .eq('role', 'فني السلامة العامة')
-        .eq('is_approved', true);
-
-    setState(() {
-      technicians =
-          List<Map<String, dynamic>>.from(response).map((tech) {
-            final count = taskCounts[tech['id']] ?? 0;
-            return {
-              'id': tech['id'],
-              'name': tech['name'],
-              'assignedPercent': '$count مهمة',
-            };
-          }).toList();
-    });
   }
 
   Future<void> _fetchRequests() async {
@@ -126,164 +87,14 @@ class _EmergencyTasksPageState extends State<EmergencyTasksPage> {
     return match['name'] ?? 'غير معروف';
   }
 
-  void _showConfirmationDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder:
-          (_) => Directionality(
-            textDirection: TextDirection.rtl,
-            child: AlertDialog(
-              title: const Text('تأكيد الإسناد'),
-              content: const Text(
-                'هل أنت متأكد من اضافة هذه المهام لهذا المستخدم؟',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () async {
-                    final toolDetails =
-                        requests
-                            .where((r) => selectedRequestIds.contains(r['id']))
-                            .toList();
-                    final toolTypes = <String>{};
-                    final materialTypes = <String>{};
-                    final workPlaces = <String>{};
-
-                    for (final request in toolDetails) {
-                      final toolName = request['tool']?.toString();
-
-                      if (toolName == null || toolName.isEmpty) continue;
-
-                      final matchingTool =
-                          await supabase
-                              .from('safety_tools')
-                              .select('type, material_type')
-                              .eq('name', toolName)
-                              .maybeSingle();
-
-                      final type = matchingTool?['type']?.toString();
-                      final material =
-                          matchingTool?['material_type']?.toString();
-                      final location = request['locationName']?.toString();
-
-                      if (type != null && type.isNotEmpty) toolTypes.add(type);
-                      if (material != null && material.isNotEmpty)
-                        materialTypes.add(material);
-                      if (location != null && location.isNotEmpty)
-                        workPlaces.add(location);
-                    }
-
-                    final userData =
-                        await supabase
-                            .from('users')
-                            .select()
-                            .eq('id', selectedTechnicianId!)
-                            .single();
-
-                    List<String> updateList(
-                      dynamic current,
-                      Set<String> newValues,
-                    ) {
-                      try {
-                        if (current is List) {
-                          return {
-                            ...current.cast<String>(),
-                            ...newValues,
-                          }.toList();
-                        } else if (current is String &&
-                            current.trim().startsWith('[')) {
-                          final parsed = jsonDecode(current);
-                          if (parsed is List) {
-                            return {
-                              ...parsed.map((e) => e.toString()),
-                              ...newValues,
-                            }.toList();
-                          }
-                        }
-                      } catch (_) {}
-                      return newValues.toList();
-                    }
-
-                    final updatedToolTypes = updateList(
-                      userData['tool_type'],
-                      toolTypes,
-                    );
-                    final updatedMaterialTypes = updateList(
-                      userData['material_type'],
-                      materialTypes,
-                    );
-                    final updatedWorkPlaces = updateList(
-                      userData['work_place'],
-                      workPlaces,
-                    );
-                    final updatedTaskCount =
-                        (userData['task_count'] ?? 0) +
-                        selectedRequestIds.length;
-
-                    await supabase
-                        .from('users')
-                        .update({
-                          'tool_type': updatedToolTypes,
-                          'material_type': updatedMaterialTypes,
-                          'work_place': updatedWorkPlaces,
-                          'task_count': updatedTaskCount,
-                        })
-                        .eq('id', selectedTechnicianId!);
-
-                    for (final requestId in selectedRequestIds) {
-                      final request = requests.firstWhere(
-                        (r) => r['id'] == requestId,
-                      );
-                      final toolName = request['tool'];
-                      final tool =
-                          await supabase
-                              .from('safety_tools')
-                              .select('id')
-                              .eq('name', toolName)
-                              .maybeSingle();
-                      await supabase.from('emergency_tasks').insert({
-                        'request_id': requestId,
-                        'tool_id': tool != null ? tool['id'] : null,
-                        'assigned_to': selectedTechnicianId,
-                        'assigned_by': supabase.auth.currentUser!.id,
-                        'due_date':
-                            DateTime.now()
-                                .add(const Duration(days: 6))
-                                .toIso8601String(),
-                      });
-                    }
-
-                    Navigator.pop(context);
-                    setState(() => selectedRequestIds.clear());
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('تم إسناد المهام وتحديث الفني بنجاح'),
-                      ),
-                    );
-                    await _fetchTaskCounts();
-                    _fetchTechnicians();
-                    _fetchRequests();
-                  },
-                  child: const Text('نعم'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('لا'),
-                ),
-              ],
-            ),
-          ),
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final filteredTechnicians =
-        technicians.where((tech) {
-          return tech['name'].toString().toLowerCase().contains(
-            _techSearchController.text.toLowerCase(),
-          );
-        }).toList();
-
     final keyword = _toolSearchController.text.trim();
     final filteredRequests =
         requests.where((req) {
@@ -295,10 +106,11 @@ class _EmergencyTasksPageState extends State<EmergencyTasksPage> {
               );
         }).toList();
 
-    final selectedRatio =
-        filteredRequests.isEmpty
-            ? '0%'
-            : '${((selectedRequestIds.length / filteredRequests.length) * 100).toStringAsFixed(0)}%';
+    final locationGroups = <String, List<Map<String, dynamic>>>{};
+    for (final req in filteredRequests) {
+      final loc = req['locationName'];
+      locationGroups.putIfAbsent(loc, () => []).add(req);
+    }
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -315,161 +127,108 @@ class _EmergencyTasksPageState extends State<EmergencyTasksPage> {
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            children: [
-              Text(
-                'عدد الطلبات المحددة: ${selectedRequestIds.length} من ${filteredRequests.length} ($selectedRatio)',
-              ),
-              if (selectedTechnicianName != null)
-                Text('الفني المحدد : $selectedTechnicianName '),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              selectedRequestIds =
-                                  filteredRequests
-                                      .map((r) => r['id'] as String)
-                                      .toList();
-                            });
-                          },
-                          child: const Text('تحديد الكل'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              selectedRequestIds.clear();
-                            });
-                          },
-                          child: const Text('إلغاء التحديد الكلي'),
-                        ),
-                        TextField(
-                          controller: _toolSearchController,
-                          decoration: const InputDecoration(
-                            labelText:
-                                '🔍 اكتب أول حرف من الموقع أو اسم الأداة',
-                          ),
-                          onChanged: (_) => setState(() {}),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: _techSearchController,
-                      decoration: const InputDecoration(
-                        labelText: '🔍 ابحث عن اسم الفني',
-                      ),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: Row(
+        body:
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
                   children: [
-                    Expanded(
-                      child: ListView(
-                        children:
-                            filteredRequests.map((req) {
-                              final reqId = req['id'];
-                              final isSelected = selectedRequestIds.contains(
-                                reqId,
-                              );
-                              final assignedTo = req['assignedTo'];
-                              final assignedToAnother =
-                                  assignedTo != null &&
-                                  assignedTo != selectedTechnicianId;
-                              final assignedToThisTech =
-                                  assignedTo != null &&
-                                  assignedTo == selectedTechnicianId;
-                              return ListTile(
-                                tileColor:
-                                    assignedToAnother
-                                        ? Colors.red[100]
-                                        : assignedToThisTech
-                                        ? Colors.green[100]
-                                        : null,
-                                title: Text(
-                                  '${req['tool']} - ${req['locationName']}',
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('المساحة المغطاة: ${req['area']}'),
-                                    Text('السبب: ${req['reason']}'),
-                                    Text('الإجراء: ${req['action']}'),
-                                    if (assignedToAnother)
-                                      const Text(
-                                        '❗ تم إسناد هذا الطلب لمستخدم آخر',
-                                      ),
-                                  ],
-                                ),
-                                trailing: Checkbox(
-                                  value: isSelected,
-                                  onChanged: (val) {
-                                    setState(() {
-                                      if (isSelected) {
-                                        selectedRequestIds.remove(reqId);
-                                      } else {
-                                        selectedRequestIds.add(reqId);
-                                      }
-                                    });
-                                  },
-                                ),
-                              );
-                            }).toList(),
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: TextField(
+                        controller: _toolSearchController,
+                        decoration: const InputDecoration(
+                          labelText: '🔍 اكتب أول حرف من الموقع أو اسم الأداة',
+                        ),
+                        onChanged: (_) => setState(() {}),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ListView(
-                        children:
-                            filteredTechnicians.map((tech) {
-                              return Card(
-                                color:
-                                    selectedTechnicianId == tech['id']
-                                        ? Colors.blue[100]
-                                        : null,
-                                child: ListTile(
-                                  title: Text(tech['name']),
-                                  subtitle: Text(
-                                    'عدد المهام: ${tech['assignedPercent']}',
+                    if (locationGroups.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(24.0),
+                        child: Text(
+                          'لا توجد مهام حالياً',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    if (locationGroups.isNotEmpty)
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.all(16),
+                          children:
+                              locationGroups.entries.map((entry) {
+                                final loc = entry.key;
+                                final tasks = entry.value;
+                                final assignedCount =
+                                    tasks
+                                        .where((t) => t['assigned'] == true)
+                                        .length;
+                                final total = tasks.length;
+                                return Card(
+                                  elevation: 2,
+                                  margin: const EdgeInsets.only(bottom: 20),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  onTap: () {
-                                    setState(() {
-                                      selectedTechnicianId = tech['id'];
-                                      selectedTechnicianName = tech['name'];
-                                    });
-                                  },
-                                ),
-                              );
-                            }).toList(),
+                                  child: ExpansionTile(
+                                    title: Text(
+                                      '$loc - $assignedCount من $total مهمة',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    children:
+                                        tasks.map((task) {
+                                          final isAssigned =
+                                              task['assigned'] == true;
+                                          return ListTile(
+                                            tileColor:
+                                                isAssigned
+                                                    ? Colors.green[100]
+                                                    : null,
+                                            title: Text(
+                                              task['tool'] ?? '',
+                                              style: TextStyle(
+                                                color:
+                                                    isAssigned
+                                                        ? Colors.green
+                                                        : null,
+                                                fontWeight:
+                                                    isAssigned
+                                                        ? FontWeight.bold
+                                                        : null,
+                                              ),
+                                            ),
+                                            subtitle: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'المساحة المغطاة: ${task['area']}',
+                                                ),
+                                                Text(
+                                                  'السبب: ${task['reason']}',
+                                                ),
+                                                Text(
+                                                  'الإجراء: ${task['action']}',
+                                                ),
+                                                if (isAssigned)
+                                                  const Text(
+                                                    '✅ تم إسناد المهمة',
+                                                  ),
+                                              ],
+                                            ),
+                                          );
+                                        }).toList(),
+                                  ),
+                                );
+                              }).toList(),
+                        ),
                       ),
-                    ),
                   ],
                 ),
-              ),
-              ElevatedButton(
-                onPressed:
-                    selectedTechnicianId != null &&
-                            selectedRequestIds.isNotEmpty
-                        ? () => _showConfirmationDialog(context)
-                        : null,
-                child: const Text('إضافة المهام'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
