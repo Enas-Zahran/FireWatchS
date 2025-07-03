@@ -102,12 +102,7 @@ class TechnicianDashboardPage extends StatelessWidget {
                 );
               },
             ),
-            IconButton(
-              icon: const Icon(Icons.assignment_turned_in, color: Colors.white),
-              tooltip: 'تصاريح الإخراج المعتمدة',
-              onPressed: () => _navigateToApprovedRequests(context),
-            ),
-            IconButton(
+             IconButton(
               icon: const Icon(Icons.file_upload, color: Colors.white),
               tooltip: 'تصريح إخراج المواد',
               onPressed: () {
@@ -119,6 +114,12 @@ class TechnicianDashboardPage extends StatelessWidget {
                 );
               },
             ),
+            IconButton(
+              icon: const Icon(Icons.assignment_turned_in, color: Colors.white),
+              tooltip: 'تصاريح الإخراج المعتمدة',
+              onPressed: () => _navigateToApprovedRequests(context),
+            ),
+           
           ],
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),

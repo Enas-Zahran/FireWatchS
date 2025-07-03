@@ -8,16 +8,15 @@ class TechnicianPeriodicLocationsPage extends StatefulWidget {
   const TechnicianPeriodicLocationsPage({super.key});
 
   @override
-  State<TechnicianPeriodicLocationsPage> createState() =>
-      _TechnicianPeriodicLocationsPageState();
+  State<TechnicianPeriodicLocationsPage> createState() => _TechnicianPeriodicLocationsPageState();
 }
 
-class _TechnicianPeriodicLocationsPageState
-    extends State<TechnicianPeriodicLocationsPage> {
+class _TechnicianPeriodicLocationsPageState extends State<TechnicianPeriodicLocationsPage> {
   bool _loading = true;
   List<Map<String, dynamic>> locations = [];
   List<Map<String, dynamic>> assignedTasks = [];
   String? userId;
+  bool showCompleted = false;
 
   @override
   void initState() {
@@ -36,24 +35,14 @@ class _TechnicianPeriodicLocationsPageState
       return;
     }
 
-    final userInfo =
-        await Supabase.instance.client
-            .from('users')
-            .select('name')
-            .eq('id', id)
-            .maybeSingle();
-
+    final userInfo = await Supabase.instance.client.from('users').select('name').eq('id', id).maybeSingle();
     final technicianName = userInfo?['name'] ?? 'Unknown';
 
-    final locs = await Supabase.instance.client
-        .from('locations')
-        .select('id, name, code');
+    final locs = await Supabase.instance.client.from('locations').select('id, name, code');
 
     final tasksResult = await Supabase.instance.client
         .from('periodic_tasks')
-        .select(
-          'id, tool_id, status, assigned_to, safety_tools(id, name, type)',
-        )
+        .select('id, tool_id, status, assigned_to, safety_tools(id, name, type)')
         .eq('assigned_to', id);
 
     List<Map<String, dynamic>> periodicTasks = [];
@@ -81,53 +70,53 @@ class _TechnicianPeriodicLocationsPageState
   List<Map<String, dynamic>> _tasksForPlace(String code) {
     return assignedTasks.where((task) {
       final name = task['tool_name'] ?? '';
-      return name.isNotEmpty && name[0].toUpperCase() == code.toUpperCase();
+      final match = name.isNotEmpty && name[0].toUpperCase() == code.toUpperCase();
+      final isDone = task['status'] == 'done';
+      return match && (showCompleted || !isDone);
     }).toList();
   }
 
-  void _navigateToReport(
-    BuildContext context,
-    Map<String, dynamic> task,
-  ) async {
+  void _navigateToReport(BuildContext context, Map<String, dynamic> task) async {
     final type = task['tool_type']?.toString().toLowerCase();
     final taskId = task['task_id'];
     final toolName = task['tool_name'];
     final technicianName = task['technician_name'];
+    final isDone = task['status'] == 'done';
 
     if (type == 'fire extinguisher') {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder:
-              (context) => FireExtinguisherReportPage(
-                taskId: taskId,
-                toolName: toolName,
-                technicianName: technicianName,
-              ),
+          builder: (_) => FireExtinguisherReportPage(
+            taskId: taskId,
+            toolName: toolName,
+            technicianName: technicianName,
+            isReadonly: isDone,
+          ),
         ),
       );
     } else if (type == 'fire hydrant') {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder:
-              (_) => FireHydrantReportPage(
-                taskId: taskId,
-                toolName: toolName,
-                taskType: 'دوري',
-              ),
+          builder: (_) => FireHydrantReportPage(
+            taskId: taskId,
+            toolName: toolName,
+            taskType: 'دوري',
+            isReadonly: isDone,
+          ),
         ),
       );
     } else if (type == 'hose reel') {
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder:
-              (_) => HoseReelReportPage(
-                taskId: taskId,
-                toolName: toolName,
-                taskType: 'دوري',
-              ),
+          builder: (_) => HoseReelReportPage(
+            taskId: taskId,
+            toolName: toolName,
+            taskType: 'دوري',
+            isReadonly: isDone,
+          ),
         ),
       );
     }
@@ -141,74 +130,70 @@ class _TechnicianPeriodicLocationsPageState
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'المواقع - المهام الدورية',
-            style: TextStyle(color: Colors.white),
-          ),
+          title: const Text('المواقع - المهام الدورية', style: TextStyle(color: Colors.white)),
           backgroundColor: const Color(0xff00408b),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
-        ),
-        body:
-            _loading
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 30,
-                  ),
-                  itemCount: locations.length,
-                  itemBuilder: (context, index) {
-                    final loc = locations[index];
-                    final code = loc['code'] ?? '';
-                    final name = loc['name'] ?? '';
-                    final tasksInPlace = _tasksForPlace(code);
-                    final remainingTasks =
-                        tasksInPlace.where((e) => e['status'] != 'done').length;
-
-                    return Card(
-                      elevation: 3,
-                      margin: const EdgeInsets.only(bottom: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: ExpansionTile(
-                        title: Text(
-                          '$name ($code) - $remainingTasks مهام',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        children:
-                            tasksInPlace.isEmpty
-                                ? [
-                                  const Padding(
-                                    padding: EdgeInsets.all(16.0),
-                                    child: Text(
-                                      'لا يوجد أدوات مسندة لهذا المكان',
-                                    ),
-                                  ),
-                                ]
-                                : tasksInPlace.map((task) {
-                                  final isDone = task['status'] == 'done';
-                                  return ListTile(
-                                    title: Text(
-                                      task['tool_name'] ?? '',
-                                      style: TextStyle(
-                                        color: isDone ? Colors.green : null,
-                                        fontWeight:
-                                            isDone ? FontWeight.bold : null,
-                                      ),
-                                    ),
-                                    subtitle: Text(task['tool_type'] ?? ''),
-                                    onTap:
-                                        () => _navigateToReport(context, task),
-                                  );
-                                }).toList(),
-                      ),
-                    );
-                  },
+          actions: [
+            Row(
+              children: [
+                const Text('عرض المكتملة', style: TextStyle(color: Colors.white)),
+                Switch(
+                  value: showCompleted,
+                  onChanged: (val) => setState(() => showCompleted = val),
                 ),
+              ],
+            ),
+          ],
+        ),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                itemCount: locations.length,
+                itemBuilder: (context, index) {
+                  final loc = locations[index];
+                  final code = loc['code'] ?? '';
+                  final name = loc['name'] ?? '';
+                  final tasksInPlace = _tasksForPlace(code);
+                  final remainingTasks = tasksInPlace.where((e) => e['status'] != 'done').length;
+
+                  return Card(
+                    elevation: 3,
+                    margin: const EdgeInsets.only(bottom: 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    child: ExpansionTile(
+                      title: Text(
+                        '$name ($code) - $remainingTasks مهام',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      children: tasksInPlace.isEmpty
+                          ? [
+                              const Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Text('لا يوجد أدوات مسندة لهذا المكان'),
+                              )
+                            ]
+                          : tasksInPlace.map((task) {
+                              final isDone = task['status'] == 'done';
+                              return ListTile(
+                                title: Text(
+                                  task['tool_name'] ?? '',
+                                  style: TextStyle(
+                                    color: isDone ? Colors.green : null,
+                                    fontWeight: isDone ? FontWeight.bold : null,
+                                  ),
+                                ),
+                                subtitle: Text(task['tool_type'] ?? ''),
+                                onTap: () => _navigateToReport(context, task),
+                              );
+                            }).toList(),
+                    ),
+                  );
+                },
+              ),
       ),
     );
   }

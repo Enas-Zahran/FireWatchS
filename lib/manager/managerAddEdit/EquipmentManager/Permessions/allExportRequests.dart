@@ -26,6 +26,7 @@ class _AllExportRequestsPageState extends State<AllExportRequestsPage> {
         .from('export_requests')
         .select('id, created_by_name, created_at')
         .eq('is_approved', false)
+        .eq('is_submitted', true) // ✅ فقط الطلبات التي تم إرسالها فعليًا
         .order('created_at', ascending: false);
 
     setState(() {
@@ -41,38 +42,47 @@ class _AllExportRequestsPageState extends State<AllExportRequestsPage> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: const Color(0xff00408b),
-          title: Center(child: const Text('طلبات تصاريح إخراج المواد', style: TextStyle(color: Colors.white))),
+          title: Center(
+            child: const Text(
+              'طلبات تصاريح إخراج المواد',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
           iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body: loading
-            ? const Center(child: CircularProgressIndicator())
-            : requests.isEmpty
+        body:
+            loading
+                ? const Center(child: CircularProgressIndicator())
+                : requests.isEmpty
                 ? const Center(child: Text('لا يوجد طلبات حالياً'))
                 : ListView.builder(
-                    itemCount: requests.length,
-                    itemBuilder: (context, index) {
-                      final req = requests[index];
-                      final technicianName = req['created_by_name'] ?? 'غير معروف';
-                      final createdAt = req['created_at']?.toString().split('T').first ?? '';
+                  itemCount: requests.length,
+                  itemBuilder: (context, index) {
+                    final req = requests[index];
+                    final technicianName =
+                        req['created_by_name'] ?? 'غير معروف';
+                    final createdAt =
+                        req['created_at']?.toString().split('T').first ?? '';
 
-                      return ListTile(
-                        leading: const Icon(Icons.mail),
-                        title: Text('طلب من: $technicianName'),
-                        subtitle: Text('تاريخ الطلب: $createdAt'),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ExportRequestMaterialsPage(
-                                requestId: req['id'],
-                                technicianName: technicianName,
-                              ),
-                            ),
-                          ).then((_) => _fetchPendingRequests());
-                        },
-                      );
-                    },
-                  ),
+                    return ListTile(
+                      leading: const Icon(Icons.mail),
+                      title: Text('طلب من: $technicianName'),
+                      subtitle: Text('تاريخ الطلب: $createdAt'),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) => ExportRequestMaterialsPage(
+                                  requestId: req['id'],
+                                  technicianName: technicianName,
+                                ),
+                          ),
+                        ).then((_) => _fetchPendingRequests());
+                      },
+                    );
+                  },
+                ),
       ),
     );
   }

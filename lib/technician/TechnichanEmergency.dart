@@ -9,12 +9,15 @@ class TechnicianEmergencyLocationsPage extends StatefulWidget {
   const TechnicianEmergencyLocationsPage({super.key});
 
   @override
-  State<TechnicianEmergencyLocationsPage> createState() => _TechnicianEmergencyLocationsPageState();
+  State<TechnicianEmergencyLocationsPage> createState() =>
+      _TechnicianEmergencyLocationsPageState();
 }
 
-class _TechnicianEmergencyLocationsPageState extends State<TechnicianEmergencyLocationsPage> {
+class _TechnicianEmergencyLocationsPageState
+    extends State<TechnicianEmergencyLocationsPage> {
   final supabase = Supabase.instance.client;
   final TextEditingController _toolSearchController = TextEditingController();
+  bool showCompleted = false;
 
   List<Map<String, dynamic>> requests = [];
   List<Map<String, dynamic>> locations = [];
@@ -69,7 +72,10 @@ class _TechnicianEmergencyLocationsPageState extends State<TechnicianEmergencyLo
   List<Map<String, dynamic>> _tasksForPlace(String code) {
     return requests.where((task) {
       final name = task['tool_name'] ?? '';
-      return name.isNotEmpty && name[0].toUpperCase() == code.toUpperCase();
+      final match =
+          name.isNotEmpty && name[0].toUpperCase() == code.toUpperCase();
+      final isDone = task['status'] == 'done';
+      return match && (showCompleted || !isDone);
     }).toList();
   }
 
@@ -80,6 +86,7 @@ class _TechnicianEmergencyLocationsPageState extends State<TechnicianEmergencyLo
     final type = task['tool_type']?.toString().toLowerCase();
     final taskId = task['task_id'];
     final toolName = task['tool_name'];
+    final isDone = task['status'] == 'done';
 
     if (type == 'fire extinguisher') {
       await Navigator.push(
@@ -90,6 +97,7 @@ class _TechnicianEmergencyLocationsPageState extends State<TechnicianEmergencyLo
                 taskId: taskId,
                 toolName: toolName,
                 taskType: 'طارئ',
+                isReadonly: isDone,
               ),
         ),
       );
@@ -102,6 +110,7 @@ class _TechnicianEmergencyLocationsPageState extends State<TechnicianEmergencyLo
                 taskId: taskId,
                 toolName: toolName,
                 taskType: 'طارئ',
+                isReadonly: isDone,
               ),
         ),
       );
@@ -114,6 +123,7 @@ class _TechnicianEmergencyLocationsPageState extends State<TechnicianEmergencyLo
                 taskId: taskId,
                 toolName: toolName,
                 taskType: 'طارئ',
+                isReadonly: isDone,
               ),
         ),
       );
@@ -137,6 +147,20 @@ class _TechnicianEmergencyLocationsPageState extends State<TechnicianEmergencyLo
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
+          actions: [
+            Row(
+              children: [
+                const Text(
+                  'عرض المكتملة',
+                  style: TextStyle(color: Colors.white),
+                ),
+                Switch(
+                  value: showCompleted,
+                  onChanged: (val) => setState(() => showCompleted = val),
+                ),
+              ],
+            ),
+          ],
         ),
         body:
             _isLoading

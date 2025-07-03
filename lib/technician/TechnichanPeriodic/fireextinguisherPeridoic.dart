@@ -7,12 +7,14 @@ class FireExtinguisherReportPage extends StatefulWidget {
   final String taskId;
   final String toolName;
   final String technicianName;
+  final bool isReadonly;
 
   const FireExtinguisherReportPage({
     super.key,
     required this.taskId,
     required this.toolName,
     required this.technicianName,
+    this.isReadonly = false,
   });
 
   @override
@@ -91,6 +93,7 @@ class _FireExtinguisherReportPageState
   }
 
   void _pickDate() async {
+    if (widget.isReadonly) return;
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -106,126 +109,124 @@ class _FireExtinguisherReportPageState
     }
   }
 
-Future<void> _submitReport() async {
-  if (!_formKey.currentState!.validate() ||
-      currentDate == null ||
-      technicianSignature.isEmpty ||
-      companySignature.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
-    );
-    return;
-  }
-
-  final user = supabase.auth.currentUser;
-  if (user == null) return;
-
-  final stepsData = steps
-      .map(
-        (s) => {
-          'step': s,
-          'checked': checks[s],
-          'note': notes[s]!.text.trim(),
-        },
-      )
-      .toList();
-
-  try {
-    // 1. Save fire extinguisher report
-    await supabase.from('fire_extinguisher_reports').insert({
-      'task_id': widget.taskId,
-      'tool_name': widget.toolName,
-      'inspection_date': currentDate!.toIso8601String(),
-      'next_inspection_date': nextDate!.toIso8601String(),
-      'company_name': companyName,
-      'company_rep': companyRep.text.trim(),
-      'technician_name': widget.technicianName,
-      'steps': stepsData,
-      'technician_signed': true,
-      'company_signed': true,
-      'other_notes': otherNotesController.text.trim(),
-    });
-
-    // 2. Mark periodic task as done
-    await supabase
-        .from('periodic_tasks')
-        .update({'status': 'done'})
-        .eq('id', widget.taskId);
-
-    // 3. Update next maintenance date
- await supabase
-    .from('safety_tools')
-    .update({
-      'last_maintenance_date': currentDate!.toIso8601String(),
-      'next_maintenance_date': nextDate!.toIso8601String(),
-    })
-    .eq('name', widget.toolName);
-
-
-    // 4. Prepare export materials
-    final exportMaterials = stepsData
-        .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
-        .map((s) => {'toolName': widget.toolName, 'note': s['note']})
-        .toList();
-
-    if (otherNotesController.text.trim().isNotEmpty) {
-      exportMaterials.add({
-        'toolName': widget.toolName,
-        'note': otherNotesController.text.trim(),
-      });
+  Future<void> _submitReport() async {
+    if (!_formKey.currentState!.validate() ||
+        currentDate == null ||
+        technicianSignature.isEmpty ||
+        companySignature.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
+      );
+      return;
     }
 
-    if (!mounted) return;
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
 
-    if (exportMaterials.isNotEmpty) {
-      // 🔁 Check if export request already exists
-      final existing = await supabase
-          .from('export_requests')
-          .select('id, tool_codes')
-          .eq('created_by', user.id)
-          .eq('is_approved', false)
-          .order('created_at', ascending: false)
-          .limit(1)
-          .maybeSingle();
+    final stepsData =
+        steps
+            .map(
+              (s) => {
+                'step': s,
+                'checked': checks[s],
+                'note': notes[s]!.text.trim(),
+              },
+            )
+            .toList();
 
-      if (existing != null) {
-        final existingId = existing['id'];
-        final List<dynamic> currentTools = existing['tool_codes'] ?? [];
+    try {
+      await supabase.from('fire_extinguisher_reports').insert({
+        'task_id': widget.taskId,
+        'tool_name': widget.toolName,
+        'inspection_date': currentDate!.toIso8601String(),
+        'next_inspection_date': nextDate!.toIso8601String(),
+        'company_name': companyName,
+        'company_rep': companyRep.text.trim(),
+        'technician_name': widget.technicianName,
+        'steps': stepsData,
+        'technician_signed': true,
+        'company_signed': true,
+        'other_notes': otherNotesController.text.trim(),
+      });
 
-        final updatedTools = [...currentTools, ...exportMaterials];
+      await supabase
+          .from('periodic_tasks')
+          .update({'status': 'done'})
+          .eq('id', widget.taskId);
 
-        await supabase.from('export_requests').update({
-          'tool_codes': updatedTools,
-          'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
-        }).eq('id', existingId);
-      } else {
-        // Create new request
-        await supabase.from('export_requests').insert({
-          'tool_codes': exportMaterials,
-          'created_by': user.id,
-          'created_by_role': 'فني السلامة العامة',
-          'created_by_name': widget.technicianName,
-          'usage_reason': exportMaterials.map((m) => m['note']).join(' - '),
-          'action_taken': 'التقرير الدوري - طفاية حريق',
-          'is_approved': false,
-          'created_at': DateTime.now().toIso8601String(),
+      await supabase
+          .from('safety_tools')
+          .update({
+            'last_maintenance_date': currentDate!.toIso8601String(),
+            'next_maintenance_date': nextDate!.toIso8601String(),
+          })
+          .eq('name', widget.toolName);
+
+      final exportMaterials =
+          stepsData
+              .where(
+                (s) => s['note'] != null && s['note'].toString().isNotEmpty,
+              )
+              .map((s) => {'toolName': widget.toolName, 'note': s['note']})
+              .toList();
+
+      if (otherNotesController.text.trim().isNotEmpty) {
+        exportMaterials.add({
+          'toolName': widget.toolName,
+          'note': otherNotesController.text.trim(),
         });
       }
+
+      if (!mounted) return;
+
+      if (exportMaterials.isNotEmpty) {
+        final existing =
+            await supabase
+                .from('export_requests')
+                .select('id, tool_codes')
+                .eq('created_by', user.id)
+                .eq('is_approved', false)
+                .order('created_at', ascending: false)
+                .limit(1)
+                .maybeSingle();
+
+        if (existing != null) {
+          final existingId = existing['id'];
+          final List<dynamic> currentTools = existing['tool_codes'] ?? [];
+          final updatedTools = [...currentTools, ...exportMaterials];
+
+          await supabase
+              .from('export_requests')
+              .update({
+                'tool_codes': updatedTools,
+                'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
+              })
+              .eq('id', existingId);
+        } else {
+          await supabase.from('export_requests').insert({
+            'tool_codes': exportMaterials,
+            'created_by': user.id,
+            'created_by_role': 'فني السلامة العامة',
+            'created_by_name': widget.technicianName,
+            'usage_reason': exportMaterials.map((m) => m['note']).join(' - '),
+            'action_taken': 'التقرير الدوري - طفاية حريق',
+            'is_approved': false,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        }
+      }
+
+      Navigator.pop(context);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير')));
+    } catch (e) {
+      print('🔥 Supabase error: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')));
     }
-
-    Navigator.pop(context);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير')));
-  } catch (e) {
-    print('🔥 Supabase error: $e');
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')));
   }
-}
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -286,10 +287,13 @@ Future<void> _submitReport() async {
                             'تاريخ الفحص: ${DateFormat.yMd().format(currentDate!)}\nتاريخ الفحص القادم: ${DateFormat.yMd().format(nextDate!)}',
                           )
                           : const Text('لم يتم اختيار تاريخ'),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.calendar_today),
-                    onPressed: _pickDate,
-                  ),
+                  trailing:
+                      widget.isReadonly
+                          ? null
+                          : IconButton(
+                            icon: const Icon(Icons.calendar_today),
+                            onPressed: _pickDate,
+                          ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -313,7 +317,10 @@ Future<void> _submitReport() async {
                       children: [
                         Checkbox(
                           value: checks[step],
-                          onChanged: (v) => setState(() => checks[step] = v!),
+                          onChanged:
+                              widget.isReadonly
+                                  ? null
+                                  : (v) => setState(() => checks[step] = v!),
                         ),
                         const SizedBox(width: 8),
                         Expanded(child: Text(step, textAlign: TextAlign.right)),
@@ -321,25 +328,27 @@ Future<void> _submitReport() async {
                         IconButton(
                           icon: const Icon(Icons.edit_note),
                           onPressed:
-                              () => showDialog(
-                                context: context,
-                                builder:
-                                    (_) => AlertDialog(
-                                      title: Text('ملاحظات لـ $step'),
-                                      content: TextFormField(
-                                        controller: notes[step],
-                                        maxLines: 4,
-                                        textAlign: TextAlign.right,
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed:
-                                              () => Navigator.pop(context),
-                                          child: const Text('تم'),
+                              widget.isReadonly
+                                  ? null
+                                  : () => showDialog(
+                                    context: context,
+                                    builder:
+                                        (_) => AlertDialog(
+                                          title: Text('ملاحظات لـ $step'),
+                                          content: TextFormField(
+                                            controller: notes[step],
+                                            maxLines: 4,
+                                            textAlign: TextAlign.right,
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed:
+                                                  () => Navigator.pop(context),
+                                              child: const Text('تم'),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
-                              ),
+                                  ),
                         ),
                       ],
                     ),
@@ -347,8 +356,7 @@ Future<void> _submitReport() async {
                 ),
               ),
               const SizedBox(height: 16),
-              const SizedBox(height: 16),
-              Text(
+              const Text(
                 'ملاحظات أخرى إن وجدت:',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
@@ -356,6 +364,7 @@ Future<void> _submitReport() async {
               TextFormField(
                 controller: otherNotesController,
                 maxLines: 4,
+                enabled: !widget.isReadonly,
                 decoration: InputDecoration(
                   hintText: 'أدخل ملاحظات إضافية...',
                   border: OutlineInputBorder(
@@ -363,7 +372,6 @@ Future<void> _submitReport() async {
                   ),
                 ),
               ),
-
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -377,6 +385,7 @@ Future<void> _submitReport() async {
                       Text('اسم الشركة المنفذة: ${companyName ?? '...'}'),
                       TextFormField(
                         controller: companyRep,
+                        enabled: !widget.isReadonly,
                         decoration: const InputDecoration(
                           labelText: 'اسم مندوب الشركة',
                         ),
@@ -384,10 +393,13 @@ Future<void> _submitReport() async {
                       ),
                       const SizedBox(height: 12),
                       const Text('توقيع مندوب الشركة:'),
-                      Signature(
-                        controller: companySignature,
-                        height: 100,
-                        backgroundColor: Colors.grey[200]!,
+                      AbsorbPointer(
+                        absorbing: widget.isReadonly,
+                        child: Signature(
+                          controller: companySignature,
+                          height: 100,
+                          backgroundColor: Colors.grey[200]!,
+                        ),
                       ),
                     ],
                   ),
@@ -406,47 +418,38 @@ Future<void> _submitReport() async {
                     children: [
                       Text('اسم الفني: ${widget.technicianName}'),
                       const Text('توقيع الفني:'),
-                      Signature(
-                        controller: technicianSignature,
-                        height: 100,
-                        backgroundColor: Colors.grey[200]!,
+                      AbsorbPointer(
+                        absorbing: widget.isReadonly,
+                        child: Signature(
+                          controller: technicianSignature,
+                          height: 100,
+                          backgroundColor: Colors.grey[200]!,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              Center(
-                child: ElevatedButton.icon(
-                  onPressed: _submitReport,
-                  // onPressed: () async{
-                  //    await initializeDateFormatting('ar_SA', null);
-                  //   Navigator.push(
-                  //     context,
-                  //     MaterialPageRoute(
-                  //       builder:
-                  //           (context) => MaterialExitAuthorizationPage(
-                  //             materials: [],
-                  //             technicianName: widget.technicianName,
-                  //           ),
-                  //     ),
-                  //   );
-                  // },
-                  icon: const Icon(Icons.check),
-                  label: const Text('تقديم التقرير وإنهاء المهمة'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xff00408b),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              if (!widget.isReadonly)
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: _submitReport,
+                    icon: const Icon(Icons.check),
+                    label: const Text('تقديم التقرير وإنهاء المهمة'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xff00408b),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ),

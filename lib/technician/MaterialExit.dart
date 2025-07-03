@@ -133,13 +133,12 @@ class _MaterialExitAuthorizationPageState
         'technician_signature': signatureBase64,
         'tool_codes': materials,
         'usage_reason': materials.map((m) => m['note']).join(' - '),
-        
       };
 
       if (requestId != null) {
         await supabase
             .from('export_requests')
-            .update(payload)
+            .update({...payload, 'is_submitted': true})
             .eq('id', requestId!);
       } else {
         await supabase.from('export_requests').insert({
@@ -148,6 +147,7 @@ class _MaterialExitAuthorizationPageState
           'created_by_name': technicianName,
           'created_by_role': 'فني السلامة العامة',
           'is_approved': false,
+          'is_submitted': true, // ✅ تمت الإرسال فعليًا
           'created_at': DateTime.now().toIso8601String(),
         });
       }
