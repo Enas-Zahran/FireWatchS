@@ -34,7 +34,27 @@ class _MaterialExitAuthorizationPageState
   @override
   void initState() {
     super.initState();
+    _fetchTechnicianName();
     _loadExportRequest();
+  }
+
+  Future<void> _fetchTechnicianName() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final userData =
+        await supabase
+            .from('users')
+            .select('name')
+            .eq('id', user.id)
+            .maybeSingle();
+
+    if (userData != null && userData['name'] != null) {
+      setState(() {
+        technicianName = userData['name'];
+      });
+    }
   }
 
   Future<void> _loadExportRequest() async {
@@ -47,14 +67,17 @@ class _MaterialExitAuthorizationPageState
             .from('export_requests')
             .select()
             .eq('created_by', user.id)
-            .eq('is_approved', false)
+            .filter(
+              'is_approved',
+              'is',
+              null,
+            ) // فقط الطلبات اللي لسا ما تم اعتمادها أو رفضها
             .order('created_at', ascending: false)
             .limit(1)
             .maybeSingle();
 
     if (response != null) {
       requestId = response['id'];
-      technicianName = response['created_by_name'] ?? '';
 
       final List<dynamic>? toolList = response['tool_codes'];
       if (toolList != null) {
@@ -146,7 +169,7 @@ class _MaterialExitAuthorizationPageState
           'created_by': user.id,
           'created_by_name': technicianName,
           'created_by_role': 'فني السلامة العامة',
-          'is_approved': false,
+          'is_approved': null,
           'is_submitted': true, // ✅ تمت الإرسال فعليًا
           'created_at': DateTime.now().toIso8601String(),
         });

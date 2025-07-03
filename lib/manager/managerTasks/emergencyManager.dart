@@ -152,93 +152,105 @@ class _EmergencyTasksPageState extends State<EmergencyTasksPage> {
   }
 
   Future<void> _assignTasks() async {
-    if (selectedTechnicianId == null || selectedRequestIds.isEmpty) return;
-    setState(() => _isLoading = true);
-    try {
-      final tasks = selectedRequestIds.map((id) => {
+  if (selectedTechnicianId == null || selectedRequestIds.isEmpty) return;
+
+  setState(() => _isLoading = true);
+  try {
+    final toolNames = selectedRequestIds.map((id) {
+      return requests.firstWhere((r) => r['id'] == id)['tool'];
+    }).toList();
+
+    final toolResponse = await supabase
+        .from('safety_tools')
+        .select('id, name, type, material_type')
+        .inFilter('name', toolNames);
+
+    final toolMap = {for (var tool in toolResponse) tool['name']: tool['id']};
+
+    final tasks = selectedRequestIds.map((id) {
+      final req = requests.firstWhere((r) => r['id'] == id);
+      return {
         'request_id': id,
         'assigned_to': selectedTechnicianId,
         'assigned_by': supabase.auth.currentUser!.id,
         'due_date': DateTime.now().add(const Duration(days: 6)).toIso8601String(),
-      }).toList();
+        'tool_id': toolMap[req['tool']],
+      };
+    }).toList();
 
-      await supabase.from('emergency_tasks').insert(tasks);
+    await supabase.from('emergency_tasks').insert(tasks);
 
-      // Fetch technician user info
-      final userData = await supabase
-          .from('users')
-          .select()
-          .eq('id', selectedTechnicianId!)
-          .single();
+    final toolDetails = requests.where((r) => selectedRequestIds.contains(r['id'])).toList();
+    final toolTypes = <String>{};
+    final materialTypes = <String>{};
+    final workPlaces = <String>{};
 
-      final selectedReports =
-          requests.where((r) => selectedRequestIds.contains(r['id'])).toList();
+    for (final req in toolDetails) {
+      final toolName = req['tool']?.toString();
+      if (toolName == null || toolName.isEmpty) continue;
 
-      final toolTypes = <String>{};
-      final materialTypes = <String>{};
-      final workPlaces = <String>{};
+      final matchingTool = await supabase
+          .from('safety_tools')
+          .select('type, material_type')
+          .eq('name', toolName)
+          .maybeSingle();
 
-      for (final report in selectedReports) {
-        final toolName = report['tool']?.toString();
-        final location = report['locationName']?.toString();
+      final type = matchingTool?['type']?.toString();
+      final material = matchingTool?['material_type']?.toString();
+      final location = req['locationName']?.toString();
 
-        if (toolName == null || toolName.isEmpty) continue;
-
-        final matchingTool = await supabase
-            .from('safety_tools')
-            .select('type, material_type')
-            .eq('name', toolName)
-            .maybeSingle();
-
-        final type = matchingTool?['type']?.toString();
-        final material = matchingTool?['material_type']?.toString();
-
-        if (type != null && type.isNotEmpty) toolTypes.add(type);
-        if (material != null && material.isNotEmpty) materialTypes.add(material);
-        if (location != null && location.isNotEmpty) workPlaces.add(location);
-      }
-
-      List<String> updateList(dynamic current, Set<String> newValues) {
-        try {
-          if (current is List) {
-            return {...current.cast<String>(), ...newValues}.toList();
-          } else if (current is String && current.trim().startsWith('[')) {
-            final parsed = jsonDecode(current);
-            if (parsed is List) {
-              return {
-                ...parsed.map((e) => e.toString()),
-                ...newValues,
-              }.toList();
-            }
-          }
-        } catch (_) {}
-        return newValues.toList();
-      }
-
-      final updatedToolTypes = updateList(userData['tool_type'], toolTypes);
-      final updatedMaterialTypes = updateList(userData['material_type'], materialTypes);
-      final updatedWorkPlaces = updateList(userData['work_place'], workPlaces);
-      final updatedTaskCount = (userData['task_count'] ?? 0) + selectedRequestIds.length;
-
-      await supabase.from('users').update({
-        'tool_type': updatedToolTypes,
-        'material_type': updatedMaterialTypes,
-        'work_place': updatedWorkPlaces,
-        'task_count': updatedTaskCount,
-      }).eq('id', selectedTechnicianId!);
-
-      setState(() => selectedRequestIds.clear());
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إسناد المهام وتحديث الفني بنجاح')),
-      );
-
-      await _loadInitialData();
-    } catch (e) {
-      _showErrorSnackbar('فشل في الإسناد: $e');
-    } finally {
-      setState(() => _isLoading = false);
+      if (type != null && type.isNotEmpty) toolTypes.add(type);
+      if (material != null && material.isNotEmpty) materialTypes.add(material);
+      if (location != null && location.isNotEmpty) workPlaces.add(location);
     }
+
+    final userData = await supabase
+        .from('users')
+        .select()
+        .eq('id', selectedTechnicianId!)
+        .single();
+
+    List<String> updateList(dynamic current, Set<String> newValues) {
+      try {
+        if (current is List) {
+          return {...current.cast<String>(), ...newValues}.toList();
+        } else if (current is String && current.trim().startsWith('[')) {
+          final parsed = jsonDecode(current);
+          if (parsed is List) {
+            return {
+              ...parsed.map((e) => e.toString()),
+              ...newValues,
+            }.toList();
+          }
+        }
+      } catch (_) {}
+      return newValues.toList();
+    }
+
+    final updatedToolTypes = updateList(userData['tool_type'], toolTypes);
+    final updatedMaterialTypes = updateList(userData['material_type'], materialTypes);
+    final updatedWorkPlaces = updateList(userData['work_place'], workPlaces);
+    final updatedTaskCount = (userData['task_count'] ?? 0) + selectedRequestIds.length;
+
+    await supabase.from('users').update({
+      'tool_type': updatedToolTypes,
+      'material_type': updatedMaterialTypes,
+      'work_place': updatedWorkPlaces,
+      'task_count': updatedTaskCount,
+    }).eq('id', selectedTechnicianId!);
+
+    setState(() => selectedRequestIds.clear());
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تم إسناد المهام وتحديث الفني بنجاح')),
+    );
+
+    await _loadInitialData();
+  } catch (e) {
+    _showErrorSnackbar('فشل في الإسناد: $e');
+  } finally {
+    setState(() => _isLoading = false);
   }
+}
 
   @override
   Widget build(BuildContext context) {

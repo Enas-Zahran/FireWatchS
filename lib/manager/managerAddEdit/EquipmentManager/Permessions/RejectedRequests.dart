@@ -3,14 +3,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:ui' as ui;
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/Permessions/exportRequests.dart';
 
-class AllExportRequestsPage extends StatefulWidget {
-  const AllExportRequestsPage({super.key});
+class RejectedExportRequestsPage extends StatefulWidget {
+  const RejectedExportRequestsPage({super.key});
 
   @override
-  State<AllExportRequestsPage> createState() => _AllExportRequestsPageState();
+  State<RejectedExportRequestsPage> createState() =>
+      _RejectedExportRequestsPageState();
 }
 
-class _AllExportRequestsPageState extends State<AllExportRequestsPage> {
+class _RejectedExportRequestsPageState
+    extends State<RejectedExportRequestsPage> {
   final supabase = Supabase.instance.client;
   List<Map<String, dynamic>> requests = [];
   bool loading = true;
@@ -18,15 +20,15 @@ class _AllExportRequestsPageState extends State<AllExportRequestsPage> {
   @override
   void initState() {
     super.initState();
-    _fetchPendingRequests();
+    _fetchApprovedRequests();
   }
 
-  Future<void> _fetchPendingRequests() async {
+  Future<void> _fetchApprovedRequests() async {
     final response = await supabase
         .from('export_requests')
         .select('id, created_by_name, created_at')
-        .filter('is_approved', 'is', null)
-        .eq('is_submitted', true) // ✅ فقط الطلبات التي تم إرسالها فعليًا
+        .eq('is_submitted', true)
+        .eq('is_approved', false)
         .order('created_at', ascending: false);
 
     setState(() {
@@ -42,9 +44,9 @@ class _AllExportRequestsPageState extends State<AllExportRequestsPage> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: const Color(0xff00408b),
-          title: Center(
-            child: const Text(
-              'طلبات تصاريح إخراج المواد',
+          title: const Center(
+            child: Text(
+              'التصاريح المرفوضة',
               style: TextStyle(color: Colors.white),
             ),
           ),
@@ -54,7 +56,7 @@ class _AllExportRequestsPageState extends State<AllExportRequestsPage> {
             loading
                 ? const Center(child: CircularProgressIndicator())
                 : requests.isEmpty
-                ? const Center(child: Text('لا يوجد طلبات حالياً'))
+                ? const Center(child: Text('لا يوجد تصاريح مرفوضة حالياً'))
                 : ListView.builder(
                   itemCount: requests.length,
                   itemBuilder: (context, index) {
@@ -65,7 +67,10 @@ class _AllExportRequestsPageState extends State<AllExportRequestsPage> {
                         req['created_at']?.toString().split('T').first ?? '';
 
                     return ListTile(
-                      leading: const Icon(Icons.mail),
+                      leading: const Icon(
+                        Icons.check_circle,
+                        color: Colors.red,
+                      ),
                       title: Text('طلب من: $technicianName'),
                       subtitle: Text('تاريخ الطلب: $createdAt'),
                       onTap: () {
@@ -76,10 +81,10 @@ class _AllExportRequestsPageState extends State<AllExportRequestsPage> {
                                 (_) => ExportRequestMaterialsPage(
                                   requestId: req['id'],
                                   technicianName: technicianName,
-                                  isReadonly: false,
+                                  isReadonly: true, // ✅ عرض فقط
                                 ),
                           ),
-                        ).then((_) => _fetchPendingRequests());
+                        );
                       },
                     );
                   },

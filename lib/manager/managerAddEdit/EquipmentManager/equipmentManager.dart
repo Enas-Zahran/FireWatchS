@@ -4,8 +4,9 @@ import 'package:FireWatch/My/InputDecoration.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/toolDetails.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/addSafteyTool.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/editSafteyTool.dart';
-
+import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/Permessions/ApprovedRequests.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/Permessions/allExportRequests.dart';
+import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/Permessions/RejectedRequests.dart';
 
 class AllToolsPage extends StatefulWidget {
   @override
@@ -41,7 +42,9 @@ class _AllToolsPageState extends State<AllToolsPage> {
     final data = await Supabase.instance.client
         .from('export_requests')
         .select()
-        .eq('is_approved', false);
+        .eq('is_submitted', true)
+        .filter('is_approved', 'is', null); // ✅ فقط المعلقة
+
     setState(() {
       _hasPendingRequests = data.isNotEmpty;
     });
@@ -144,10 +147,34 @@ class _AllToolsPageState extends State<AllToolsPage> {
                 );
 
                 if (result == true) {
-                  await _fetchTools(); 
+                  await _fetchTools();
                 }
 
                 await _checkPendingRequests();
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.approval),
+              tooltip: 'الطلبات الموافق عليها',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ApprovedExportRequestsPage(),
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.cancel, color: Colors.red),
+              tooltip: 'الطلبات المرفوضة',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const RejectedExportRequestsPage(),
+                  ),
+                );
               },
             ),
           ],

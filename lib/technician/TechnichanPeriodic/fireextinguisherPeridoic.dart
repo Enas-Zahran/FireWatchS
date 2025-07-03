@@ -185,7 +185,7 @@ class _FireExtinguisherReportPageState
                 .from('export_requests')
                 .select('id, tool_codes')
                 .eq('created_by', user.id)
-                .eq('is_approved', false)
+                .filter('is_approved', 'is', null)
                 .order('created_at', ascending: false)
                 .limit(1)
                 .maybeSingle();
@@ -210,7 +210,8 @@ class _FireExtinguisherReportPageState
             'created_by_name': widget.technicianName,
             'usage_reason': exportMaterials.map((m) => m['note']).join(' - '),
             'action_taken': 'التقرير الدوري - طفاية حريق',
-            'is_approved': false,
+            'is_approved': null,
+            'is_submitted': false,
             'created_at': DateTime.now().toIso8601String(),
           });
         }

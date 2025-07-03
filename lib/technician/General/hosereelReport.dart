@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:signature/signature.dart';
 import 'package:intl/intl.dart';
-import 'dart:ui'as ui;
+import 'dart:ui' as ui;
+
 class HoseReelReportPage extends StatefulWidget {
   final String taskId;
   final String toolName;
@@ -27,8 +28,12 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
   DateTime? nextDate;
   Map<String, bool> checks = {};
   Map<String, TextEditingController> notes = {};
-  final SignatureController technicianSignature = SignatureController(penStrokeWidth: 2);
-  final SignatureController companySignature = SignatureController(penStrokeWidth: 2);
+  final SignatureController technicianSignature = SignatureController(
+    penStrokeWidth: 2,
+  );
+  final SignatureController companySignature = SignatureController(
+    penStrokeWidth: 2,
+  );
   final _formKey = GlobalKey<FormState>();
   final TextEditingController companyRep = TextEditingController();
   final TextEditingController otherNotesController = TextEditingController();
@@ -59,14 +64,16 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
   Future<void> _fetchTechnician() async {
     final user = supabase.auth.currentUser;
     if (user != null) {
-      final data = await supabase
-          .from('users')
-          .select('name')
-          .eq('id', user.id)
-          .maybeSingle();
+      final data =
+          await supabase
+              .from('users')
+              .select('name')
+              .eq('id', user.id)
+              .maybeSingle();
       setState(() => technicianName = data?['name']);
     }
   }
+
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate() ||
         currentDate == null ||
@@ -159,7 +166,7 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
                 .from('export_requests')
                 .select('id, tool_codes')
                 .eq('created_by', user.id)
-                .eq('is_approved', false)
+                .filter('is_approved', 'is', null)
                 .order('created_at', ascending: false)
                 .limit(1)
                 .maybeSingle();
@@ -184,7 +191,8 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
             'created_by_role': 'فني السلامة العامة',
             'usage_reason': exportMaterials.map((m) => m['note']).join(' - '),
             'action_taken': 'التقرير ${widget.taskType} - خرطوم الحريق',
-            'is_approved': false,
+            'is_approved': null,
+            'is_submitted': false,
             'created_at': DateTime.now().toIso8601String(),
           });
         }
@@ -201,14 +209,22 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
       ).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')));
     }
   }
+
   Future<void> _fetchCompany() async {
     final currentYear = DateTime.now().year;
-    final data = await supabase
-        .from('contract_companies')
-        .select('company_name')
-        .gte('contract_start_date', DateTime(currentYear, 1, 1).toIso8601String())
-        .lte('contract_start_date', DateTime(currentYear, 12, 31).toIso8601String())
-        .maybeSingle();
+    final data =
+        await supabase
+            .from('contract_companies')
+            .select('company_name')
+            .gte(
+              'contract_start_date',
+              DateTime(currentYear, 1, 1).toIso8601String(),
+            )
+            .lte(
+              'contract_start_date',
+              DateTime(currentYear, 12, 31).toIso8601String(),
+            )
+            .maybeSingle();
     setState(() => companyName = data?['company_name']);
   }
 
@@ -256,68 +272,94 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 2,
                   child: ListTile(
                     title: Text('الأداة: ${widget.toolName}'),
-                    subtitle: currentDate != null
-                        ? Text(
-                            'تاريخ الفحص: ${DateFormat.yMd().format(currentDate!)}\nتاريخ الفحص القادم: ${DateFormat.yMd().format(nextDate!)}',
-                          )
-                        : const Text('لم يتم اختيار تاريخ'),
-                    trailing: widget.isReadonly
-                        ? null
-                        : IconButton(
-                            icon: const Icon(Icons.calendar_today),
-                            onPressed: _pickDate,
-                          ),
+                    subtitle:
+                        currentDate != null
+                            ? Text(
+                              'تاريخ الفحص: ${DateFormat.yMd().format(currentDate!)}\nتاريخ الفحص القادم: ${DateFormat.yMd().format(nextDate!)}',
+                            )
+                            : const Text('لم يتم اختيار تاريخ'),
+                    trailing:
+                        widget.isReadonly
+                            ? null
+                            : IconButton(
+                              icon: const Icon(Icons.calendar_today),
+                              onPressed: _pickDate,
+                            ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('الإجراءات:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'الإجراءات:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
-                ...steps.map((step) => Card(
-                      margin: const EdgeInsets.symmetric(vertical: 6),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        child: Row(
-                          children: [
-                            Checkbox(
-                              value: checks[step],
-                              onChanged: widget.isReadonly ? null : (v) => setState(() => checks[step] = v!),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text(step, textAlign: TextAlign.right)),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.edit_note),
-                              onPressed: widget.isReadonly
-                                  ? null
-                                  : () => showDialog(
-                                        context: context,
-                                        builder: (_) => AlertDialog(
-                                          title: Text('ملاحظات لـ $step'),
-                                          content: TextFormField(
-                                            controller: notes[step],
-                                            maxLines: 4,
-                                            textAlign: TextAlign.right,
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(context),
-                                              child: const Text('تم'),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                            ),
-                          ],
-                        ),
+                ...steps.map(
+                  (step) => Card(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                    )),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: checks[step],
+                            onChanged:
+                                widget.isReadonly
+                                    ? null
+                                    : (v) => setState(() => checks[step] = v!),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(step, textAlign: TextAlign.right),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.edit_note),
+                            onPressed:
+                                widget.isReadonly
+                                    ? null
+                                    : () => showDialog(
+                                      context: context,
+                                      builder:
+                                          (_) => AlertDialog(
+                                            title: Text('ملاحظات لـ $step'),
+                                            content: TextFormField(
+                                              controller: notes[step],
+                                              maxLines: 4,
+                                              textAlign: TextAlign.right,
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed:
+                                                    () =>
+                                                        Navigator.pop(context),
+                                                child: const Text('تم'),
+                                              ),
+                                            ],
+                                          ),
+                                    ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 16),
-                const Text('ملاحظات أخرى إن وجدت:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'ملاحظات أخرى إن وجدت:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: otherNotesController,
@@ -325,12 +367,16 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
                   enabled: !widget.isReadonly,
                   decoration: InputDecoration(
                     hintText: 'أدخل ملاحظات إضافية...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
                 Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 2,
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -341,7 +387,9 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
                         TextFormField(
                           controller: companyRep,
                           enabled: !widget.isReadonly,
-                          decoration: const InputDecoration(labelText: 'اسم مندوب الشركة'),
+                          decoration: const InputDecoration(
+                            labelText: 'اسم مندوب الشركة',
+                          ),
                           validator: (v) => v!.isEmpty ? 'مطلوب' : null,
                         ),
                         const SizedBox(height: 12),
@@ -360,7 +408,9 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
                 ),
                 const SizedBox(height: 16),
                 Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 2,
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -385,15 +435,20 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
                 if (!widget.isReadonly)
                   Center(
                     child: ElevatedButton.icon(
-                     onPressed: _submitReport,
+                      onPressed: _submitReport,
 
                       icon: const Icon(Icons.check),
                       label: const Text('تقديم التقرير وإنهاء المهمة'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xff00408b),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),

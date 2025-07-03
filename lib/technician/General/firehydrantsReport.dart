@@ -109,7 +109,8 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
       });
     }
   }
- Future<void> _submitReport() async {
+
+  Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate() ||
         currentDate == null ||
         technicianSignature.isEmpty ||
@@ -151,25 +152,24 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
       };
 
       await supabase.from('fire_hydrant_reports').insert(insertData);
-     // final toolId = await _fetchToolIdByName(widget.toolName);
+      // final toolId = await _fetchToolIdByName(widget.toolName);
 
-//       if (toolId != null) {
-//         await supabase
-//             .from('safety_tools')
-//             .update({
-//               'last_maintenance_date': DateFormat(
-//                 'yyyy-MM-dd',
-//               ).format(currentDate!),
-//               'next_maintenance_date': DateFormat(
-//                 'yyyy-MM-dd',
-//               ).format(nextDate!),
-//             })
-//             .eq('id', toolId);
-//       } else {
-//         print('❌ Tool ID not found for ${widget.toolName}');
-//       }
-// print('📦 Updating toolId: $toolId');
-
+      //       if (toolId != null) {
+      //         await supabase
+      //             .from('safety_tools')
+      //             .update({
+      //               'last_maintenance_date': DateFormat(
+      //                 'yyyy-MM-dd',
+      //               ).format(currentDate!),
+      //               'next_maintenance_date': DateFormat(
+      //                 'yyyy-MM-dd',
+      //               ).format(nextDate!),
+      //             })
+      //             .eq('id', toolId);
+      //       } else {
+      //         print('❌ Tool ID not found for ${widget.toolName}');
+      //       }
+      // print('📦 Updating toolId: $toolId');
 
       // ✅ Mark task as done based on task type
       if (widget.taskType == 'دوري') {
@@ -212,7 +212,7 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
                 .from('export_requests')
                 .select('id, tool_codes')
                 .eq('created_by', user.id)
-                .eq('is_approved', false)
+                .filter('is_approved', 'is', null)
                 .order('created_at', ascending: false)
                 .limit(1)
                 .maybeSingle();
@@ -237,7 +237,8 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
             'created_by_role': 'فني السلامة العامة',
             'usage_reason': exportMaterials.map((m) => m['note']).join(' - '),
             'action_taken': 'التقرير ${widget.taskType} - صنبور حريق',
-            'is_approved': false,
+            'is_approved': null,
+            'is_submitted': false,
             'created_at': DateTime.now().toIso8601String(),
           });
         }
@@ -255,7 +256,6 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
     }
   }
 
-  
   @override
   void dispose() {
     for (var controller in notes.values) {
@@ -456,7 +456,7 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
                 if (!widget.isReadonly)
                   Center(
                     child: ElevatedButton.icon(
-                   onPressed: _submitReport,
+                      onPressed: _submitReport,
 
                       icon: const Icon(Icons.check),
                       label: const Text('تقديم التقرير وإنهاء المهمة'),
