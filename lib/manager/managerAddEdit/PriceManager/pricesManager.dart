@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:FireWatch/manager/managerAddEdit/PriceManager/tools/toolPriceList.dart';
 import 'package:FireWatch/manager/managerAddEdit/PriceManager/companies/companiesList.dart';
+import 'package:FireWatch/manager/managerAddEdit/PriceManager/maintenance/maintenancePriceList.dart';
 class PriceDashboardPage extends StatelessWidget {
   static const routeName = '/price-dashboard';
 
@@ -44,6 +45,12 @@ class PriceDashboardPage extends StatelessWidget {
               title: 'الإجراء',
               icon: Icons.build,
               onTap: () {
+                Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => MaintenancePricesListPage()),
+);
+     
+                //MaintenancePricesListPage
                 // TODO: Navigate to Action Prices Page
               },
             ),

@@ -177,11 +177,13 @@ class _ToolPricesListPageState extends State<ToolPricesListPage> {
               builder:
                   (context) => IconButton(
                     icon: const Icon(Icons.filter_list),
+                    tooltip: 'فلتر',
                     onPressed: () => Scaffold.of(context).openEndDrawer(),
                   ),
             ),
             IconButton(
               icon: const Icon(Icons.add, color: Colors.white),
+              tooltip: 'اضافة سعر ',
               onPressed: () async {
                 await Navigator.push(
                   context,
