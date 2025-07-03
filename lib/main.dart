@@ -103,7 +103,6 @@ class MyApp extends StatelessWidget {
           ManagerDashboard.managerDashboardRoute:
               (context) => ManagerDashboard(),
           //head
-          Headdashboard.headdashboardRoute: (context) => Headdashboard(),
           //All
           AddEmergencyPage.addEmergencyRoute: (context) => AddEmergencyPage(),
         },

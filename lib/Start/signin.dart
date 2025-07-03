@@ -72,9 +72,9 @@ class _SignInPageState extends State<SignInPage> {
                 TechnicianDashboardPage.routeName,
               );
             } else if (role == 'رئيس الشعبة') {
-              Navigator.pushReplacementNamed(
+              Navigator.push(
                 context,
-                Headdashboard.headdashboardRoute,
+                MaterialPageRoute(builder: (context) => const Headdashboard()),
               );
             } else {
               Navigator.pushReplacementNamed(context, StartPage.startpageRoute);

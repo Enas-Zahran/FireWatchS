@@ -89,10 +89,12 @@ class TechnicianDashboardPage extends StatelessWidget {
           actions: [
             IconButton(
               icon: const Icon(Icons.add, color: Colors.white),
+              tooltip: 'اضافة تقرير',
               onPressed: () => _showAddOptions(context),
             ),
             IconButton(
               icon: const Icon(Icons.notifications, color: Colors.white),
+              tooltip: 'الاشعارات',
               onPressed: () {
                 Navigator.push(
                   context,
@@ -102,7 +104,7 @@ class TechnicianDashboardPage extends StatelessWidget {
                 );
               },
             ),
-             IconButton(
+            IconButton(
               icon: const Icon(Icons.file_upload, color: Colors.white),
               tooltip: 'تصريح إخراج المواد',
               onPressed: () {
@@ -119,7 +121,6 @@ class TechnicianDashboardPage extends StatelessWidget {
               tooltip: 'تصاريح الإخراج المعتمدة',
               onPressed: () => _navigateToApprovedRequests(context),
             ),
-           
           ],
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
