@@ -38,6 +38,49 @@ class _MaterialExitAuthorizationPageState
     _loadExportRequest();
   }
 
+  Widget buildMaterialDropdown(int index, List<String> items) {
+    return DropdownButtonFormField<String>(
+      value: materials[index]['material_type'],
+      decoration: const InputDecoration(labelText: 'نوع المادة'),
+      items:
+          items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+      onChanged:
+          (val) => setState(() => materials[index]['material_type'] = val),
+    );
+  }
+
+  Widget buildCapacityDropdown(int index) {
+    final selected = materials[index]['material_type'];
+    final capacities = {
+      'البودرة الجافة': ['2', '4', '6', '9', '12', '50', '100'],
+      'ثاني اكسيد الكربون': ['2', '6'],
+    };
+
+    if (selected == null || !capacities.containsKey(selected))
+      return const SizedBox.shrink();
+
+    return DropdownButtonFormField<String>(
+      value: materials[index]['capacity'],
+      decoration: const InputDecoration(labelText: 'السعة'),
+      items:
+          capacities[selected]!
+              .map((e) => DropdownMenuItem(value: e, child: Text('$e كغم')))
+              .toList(),
+      onChanged: (val) => setState(() => materials[index]['capacity'] = val),
+    );
+  }
+
+  Widget buildComponentDropdown(int index, List<String> items) {
+    return DropdownButtonFormField<String>(
+      value: materials[index]['component_name'],
+      decoration: const InputDecoration(labelText: 'اسم القطعة'),
+      items:
+          items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+      onChanged:
+          (val) => setState(() => materials[index]['component_name'] = val),
+    );
+  }
+
   Future<void> _fetchTechnicianName() async {
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
@@ -192,7 +235,15 @@ class _MaterialExitAuthorizationPageState
 
   void _addNewMaterial() {
     setState(() {
-      materials.add({'toolName': '', 'note': ''});
+      materials.add({
+        'toolName': '',
+        'note': '',
+        'action_name': null,
+        'tool_type': 'fire extinguisher',
+        'material_type': null,
+        'capacity': null,
+        'component_name': null,
+      });
     });
   }
 
@@ -315,6 +366,66 @@ class _MaterialExitAuthorizationPageState
                           decoration: const InputDecoration(labelText: 'السبب'),
                           onChanged: (val) => materials[index]['note'] = val,
                         ),
+                        DropdownButtonFormField<String>(
+                          value: material['action_name'],
+                          decoration: const InputDecoration(
+                            labelText: 'اسم الإجراء',
+                          ),
+                          items:
+                              ['صيانة', 'تركيب قطع غيار', 'تعبئة']
+                                  .map(
+                                    (e) => DropdownMenuItem(
+                                      value: e,
+                                      child: Text(e),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              material['action_name'] = val;
+                              material['material_type'] = null;
+                              material['capacity'] = null;
+                              material['component_name'] = null;
+                            });
+                          },
+                        ),
+                        if (material['action_name'] == 'صيانة') ...[
+                          buildMaterialDropdown(index, [
+                            'البودرة الجافة',
+                            'ثاني اكسيد الكربون',
+                          ]),
+                          buildCapacityDropdown(index),
+                        ] else if (material['action_name'] == 'تعبئة') ...[
+                          buildMaterialDropdown(index, [
+                            'ثاني اكسيد الكربون',
+                            'البودرة الجافة',
+                          ]),
+                        ] else if (material['action_name'] ==
+                            'تركيب قطع غيار') ...[
+                          buildMaterialDropdown(index, [
+                            'ثاني اكسيد الكربون',
+                            'البودرة الجافة',
+                            'جميع انواع الطفايات',
+                          ]),
+                          if (material['material_type'] == 'ثاني اكسيد الكربون')
+                            buildComponentDropdown(index, ['محبس طفاية CO2'])
+                          else if (material['material_type'] ==
+                              'البودرة الجافة')
+                            buildComponentDropdown(index, [
+                              'سعر رأس الطفاية كامل لطفاية البودرة مع المقبض و الخرطوم و السيفون الداخلي و ساعة الضغط و مسمار الأمان',
+                            ])
+                          else if (material['material_type'] ==
+                              'جميع انواع الطفايات')
+                            buildComponentDropdown(index, [
+                              'خرطوم طفاية حريق',
+                              'سلندر خارجي لطفاية الحريق',
+                              'ساعة ضغط',
+                              'مقبض طفاية الحريق',
+                              'قاذف طفاية الحريق',
+                              'طقم جلود(كسكيت)',
+                            ]),
+                        ],
+
                         Align(
                           alignment: Alignment.centerRight,
                           child: IconButton(

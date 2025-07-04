@@ -6,7 +6,8 @@ class AddMaintenancePricePage extends StatefulWidget {
   const AddMaintenancePricePage({super.key});
 
   @override
-  State<AddMaintenancePricePage> createState() => _AddMaintenancePricePageState();
+  State<AddMaintenancePricePage> createState() =>
+      _AddMaintenancePricePageState();
 }
 
 class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
@@ -26,12 +27,12 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
     'ساعة ضغط',
     'مقبض طفاية الحريق',
     'قاذف طفاية الحريق',
-    'طقم جلود(كسكيت)'
+    'طقم جلود(كسكيت)',
   ];
 
   final Map<String, List<String>> capacitiesByMaterial = {
-    'بودرة': ['2', '4', '6', '9', '12', '50', '100'],
-    'CO2': ['2', '6'],
+    'البودرة الجافة': ['2', '4', '6', '9', '12', '50', '100'],
+    'ثاني اكسيد الكربون': ['2', '6'],
   };
 
   void _resetSelections() {
@@ -46,9 +47,9 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
 
     final price = double.tryParse(_priceController.text.trim());
     if (price == null || price <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى إدخال سعر صالح')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('يرجى إدخال سعر صالح')));
       return;
     }
 
@@ -64,9 +65,9 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
     await Supabase.instance.client.from('maintenance_prices').insert(data);
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تمت إضافة السعر بنجاح')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('تمت إضافة السعر بنجاح')));
     Navigator.pop(context);
   }
 
@@ -76,9 +77,14 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: Center(child: const Text('إضافة سعر لإجراء',style:TextStyle(color: Colors.white) ,)),
+          title: const Center(
+            child: Text(
+              'إضافة سعر لإجراء',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
           backgroundColor: const Color(0xff00408b),
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
         body: Padding(
           padding: const EdgeInsets.all(20),
@@ -88,8 +94,15 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
               children: [
                 DropdownButtonFormField<String>(
                   value: _actionName,
-                  decoration: customInputDecoration.copyWith(labelText: 'اسم الإجراء'),
-                  items: actionNames.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  decoration: customInputDecoration.copyWith(
+                    labelText: 'اسم الإجراء',
+                  ),
+                  items:
+                      actionNames
+                          .map(
+                            (e) => DropdownMenuItem(value: e, child: Text(e)),
+                          )
+                          .toList(),
                   onChanged: (val) {
                     setState(() {
                       _actionName = val;
@@ -99,26 +112,42 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
                       }
                     });
                   },
-                  validator: (val) => val == null ? 'يرجى اختيار اسم الإجراء' : null,
+                  validator:
+                      (val) => val == null ? 'يرجى اختيار اسم الإجراء' : null,
                 ),
                 const SizedBox(height: 12),
 
                 if (_actionName == 'صيانة') ...[
-                  buildMaterialDropdown(['بودرة', 'CO2']),
-                  buildCapacityDropdown(),
+                  buildMaterialDropdown([
+                    'البودرة الجافة',
+                    'ثاني اكسيد الكربون',
+                  ]),
+                  const SizedBox(height: 12),
+                  if (_materialType != null &&
+                      capacitiesByMaterial.containsKey(_materialType))
+                    buildCapacityDropdown(),
                 ],
 
                 if (_actionName == 'تعبئة') ...[
-                  buildMaterialDropdown(['ثاني اكسيد الكربون', 'البودرة الجافة']),
+                  buildMaterialDropdown([
+                    'ثاني اكسيد الكربون',
+                    'البودرة الجافة',
+                  ]),
                 ],
 
                 if (_actionName == 'تركيب قطع غيار') ...[
-                  buildMaterialDropdown(['CO2', 'بودرة', 'جميع انواع الطفايات']),
+                  buildMaterialDropdown([
+                    'ثاني اكسيد الكربون',
+                    'البودرة الجافة',
+                    'جميع انواع الطفايات',
+                  ]),
                   const SizedBox(height: 12),
-                  if (_materialType == 'CO2')
+                  if (_materialType == 'ثاني اكسيد الكربون')
                     buildComponentDropdown(['محبس طفاية CO2'])
-                  else if (_materialType == 'بودرة')
-                    buildComponentDropdown(['سعر رأس الطفاية كامل لطفاية البودرة مع المقبض و الخرطوم و السيفون الداخلي و ساعة الضغط و مسمار الأمان'])
+                  else if (_materialType == 'البودرة الجافة')
+                    buildComponentDropdown([
+                      'سعر رأس الطفاية كامل لطفاية البودرة مع المقبض و الخرطوم و السيفون الداخلي و ساعة الضغط و مسمار الأمان',
+                    ])
                   else if (_materialType == 'جميع انواع الطفايات')
                     buildComponentDropdown(componentNamesAll),
                 ],
@@ -127,9 +156,12 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
                 TextFormField(
                   controller: _priceController,
                   keyboardType: TextInputType.number,
-                  decoration: customInputDecoration.copyWith(labelText: 'السعر'),
+                  decoration: customInputDecoration.copyWith(
+                    labelText: 'السعر',
+                  ),
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) return 'يرجى إدخال السعر';
+                    if (val == null || val.trim().isEmpty)
+                      return 'يرجى إدخال السعر';
                     final num? parsed = num.tryParse(val.trim());
                     if (parsed == null || parsed <= 0) return 'سعر غير صالح';
                     return null;
@@ -145,7 +177,7 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
                     minimumSize: const Size(400, 50),
                   ),
                   child: const Text('إضافة'),
-                )
+                ),
               ],
             ),
           ),
@@ -158,26 +190,27 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
     return DropdownButtonFormField<String>(
       value: _materialType,
       decoration: customInputDecoration.copyWith(labelText: 'نوع المادة'),
-      items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-      onChanged: (val) => setState(() {
-        _materialType = val;
-        _capacity = null;
-        _componentName = null;
-      }),
+      items:
+          items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+      onChanged:
+          (val) => setState(() {
+            _materialType = val;
+            _capacity = null;
+            _componentName = null;
+          }),
       validator: (val) => val == null ? 'يرجى اختيار نوع المادة' : null,
     );
   }
 
   Widget buildCapacityDropdown() {
-    if (_materialType == null || !capacitiesByMaterial.containsKey(_materialType)) {
-      return const SizedBox.shrink();
-    }
+    final caps = capacitiesByMaterial[_materialType]!;
     return DropdownButtonFormField<String>(
       value: _capacity,
       decoration: customInputDecoration.copyWith(labelText: 'السعة (كغم)'),
-      items: capacitiesByMaterial[_materialType]!
-          .map((e) => DropdownMenuItem(value: e, child: Text('$e كغم')))
-          .toList(),
+      items:
+          caps
+              .map((e) => DropdownMenuItem(value: e, child: Text('$e كغم')))
+              .toList(),
       onChanged: (val) => setState(() => _capacity = val),
       validator: (val) => val == null ? 'يرجى اختيار السعة' : null,
     );
@@ -187,7 +220,8 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
     return DropdownButtonFormField<String>(
       value: _componentName,
       decoration: customInputDecoration.copyWith(labelText: 'اسم القطعة'),
-      items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+      items:
+          items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: (val) => setState(() => _componentName = val),
       validator: (val) => val == null ? 'يرجى اختيار اسم القطعة' : null,
     );

@@ -17,7 +17,7 @@ class _MaintenancePricesListPageState extends State<MaintenancePricesListPage> {
   final List<String> toolTypes = ['fire extinguisher', 'hose reel', 'fire hydrant'];
   final List<String> materialTypes = [
     'ثاني اكسيد الكربون',
-    'البودرة الجافة',
+          'البودرة الجافة',
     'الرغوة (B.C.F)',
     'الماء',
     'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي',
