@@ -67,13 +67,25 @@ class _ExportRequestMaterialsPageState
   }
 
   Future<void> _fetchRequest() async {
-    final data =
-        await supabase
-            .from('export_requests')
-            .select()
-            .eq('id', widget.requestId)
-            .maybeSingle();
-    if (data != null) {
+    try {
+      final data =
+          await supabase
+              .from('export_requests')
+              .select()
+              .eq('id', widget.requestId)
+              .maybeSingle();
+
+      if (data == null) {
+        print('❌ No export request found.');
+        return;
+      }
+
+      final toolList = data['tool_codes'] as List<dynamic>? ?? [];
+
+      for (int i = 0; i < toolList.length; i++) {
+        final toolName = toolList[i]['toolName'];
+      }
+
       setState(() {
         request = data;
         _vehicleOwnerController.text = data['vehicle_owner'] ?? '';
@@ -88,29 +100,108 @@ class _ExportRequestMaterialsPageState
         materialType = data['material_type'] ?? 'مقتنيات شخصية';
         loading = false;
       });
+    } catch (e) {
+      print('❌ Error loading export request: $e');
+      if (mounted) {
+        setState(() => loading = false);
+      }
     }
+  }
+
+  List<String> getCapacities(String? materialType) {
+    if (materialType == 'البودرة الجافة') {
+      return ['2 kg', '4 kg', '6 kg', '9 kg', '12 kg', '50 kg', '100 kg'];
+    } else if (materialType == 'ثاني اكسيد الكربون') {
+      return ['2 kg', '6 kg'];
+    }
+    return [];
   }
 
   Future<double> _fetchPriceForMaterial(Map<String, dynamic> material) async {
     final actionName = material['action_name'];
-    final materialType = material['material_type'];
+    if (actionName == null) {
+      print('⚠️ action_name is missing');
+      return 0.0;
+    }
+
+    String? materialType = material['material_type'];
+    final toolName = material['toolName'];
+
+    if ((materialType == null || materialType.toString().trim().isEmpty) &&
+        toolName != null) {
+      final toolData =
+          await supabase
+              .from('safety_tools')
+              .select('material_type')
+              .eq('name', toolName)
+              .maybeSingle();
+      materialType = toolData?['material_type'];
+      print('📌 Used tool’s actual material_type: $materialType for $toolName');
+    }
+
     final capacity = material['capacity'];
     final componentName = material['component_name'];
 
-    final query = supabase
+    var query = supabase
         .from('maintenance_prices')
         .select('price')
         .eq('action_name', actionName);
-    if (materialType != null) query.eq('material_type', materialType);
-    if (capacity != null) query.eq('capacity', capacity);
-    if (componentName != null) query.eq('component_name', componentName);
+
+    if (actionName == 'صيانة') {
+      if (materialType == null || capacity == null) {
+        print(
+          '⚠️ Skipping price fetch for صيانة – missing material_type or capacity',
+        );
+        return 0.0;
+      }
+      query = query.eq('material_type', materialType).eq('capacity', capacity);
+    } else if (actionName == 'تركيب قطع غيار') {
+      if (materialType == null || componentName == null) {
+        print(
+          '⚠️ Skipping price fetch for تركيب – missing material_type or component_name',
+        );
+        return 0.0;
+      }
+      query = query
+          .eq('material_type', materialType)
+          .eq('component_name', componentName);
+    } else if (actionName == 'تعبئة') {
+      if (materialType == null) {
+        print('⚠️ Skipping price fetch for تعبئة – missing material_type');
+        return 0.0;
+      }
+      query = query.eq('material_type', materialType);
+
+      final result = await query.maybeSingle();
+      if (result != null && result['price'] != null) {
+        final unitPrice =
+            result['price'] is int
+                ? (result['price'] as int).toDouble()
+                : result['price'] as double;
+
+        final filledStr = material['filled_amount']?.toString() ?? '0';
+        final filledAmount = double.tryParse(filledStr) ?? 0.0;
+
+        final total = unitPrice * filledAmount;
+        return total;
+      }
+
+      print('❌ No unit price found for تعبئة');
+      return 0.0;
+    }
 
     final result = await query.maybeSingle();
     if (result != null && result['price'] != null) {
-      return result['price'] is int
-          ? (result['price'] as int).toDouble()
-          : result['price'];
+      final price =
+          result['price'] is int
+              ? (result['price'] as int).toDouble()
+              : result['price'] as double;
+      return price;
     }
+
+    print(
+      '❌ No price found for: action=$actionName, type=$materialType, cap=$capacity, comp=$componentName',
+    );
     return 0.0;
   }
 
@@ -137,26 +228,78 @@ class _ExportRequestMaterialsPageState
     final toolList = request?['tool_codes'] as List<dynamic>? ?? [];
     print('📦 Found ${toolList.length} materials to process');
 
+    for (int i = 0; i < toolList.length; i++) {
+      final tool = toolList[i];
+      final toolName = tool['toolName']?.toString().trim();
+      final action = tool['action_name'];
+      final materialType = tool['material_type'];
+      final capacity = tool['capacity'];
+      final componentName = tool['component_name'];
+      final filledAmount = tool['filled_amount'];
+      final type = tool['type'];
+
+      bool isValid = true;
+
+      if (toolName == null || toolName.isEmpty || action == null) {
+        isValid = false;
+      } else if (action == 'صيانة') {
+        isValid = (materialType != null && capacity != null && type != null);
+      } else if (action == 'تركيب قطع غيار') {
+        isValid =
+            (materialType != null && componentName != null && type != null);
+      } else if (action == 'تعبئة') {
+        isValid =
+            (materialType != null && filledAmount != null && type != null);
+      }
+
+      tool['is_matching'] = isValid;
+    }
+
     for (final material in toolList) {
       final toolName = material['toolName'];
+      final actionName = material['action_name'];
+      final materialType = material['material_type'];
+      final capacity = material['capacity'];
+      final componentName = material['component_name'];
+
       print('🔍 Processing tool: $toolName');
+      print('➡️ action_name: $actionName');
+      print('➡️ material_type: $materialType');
+      print('➡️ capacity: $capacity');
+      print('➡️ component_name: $componentName');
 
       final price = await _fetchPriceForMaterial(material);
       material['price'] = price;
       print('💰 Price for $toolName is $price');
 
-      if (toolName != null && toolName.toString().trim().isNotEmpty) {
+      if (price > 0 &&
+          toolName != null &&
+          toolName.toString().trim().isNotEmpty &&
+          (material['is_matching'] == true)) {
+        final previous =
+            await supabase
+                .from('safety_tools')
+                .select('actions_cost')
+                .eq('name', toolName)
+                .maybeSingle();
+
+        final previousCost =
+            (previous?['actions_cost'] ?? 0) is int
+                ? (previous?['actions_cost'] ?? 0).toDouble()
+                : (previous?['actions_cost'] ?? 0) as double;
+
+        final newCost = previousCost + price;
+
         final updateResponse = await supabase
             .from('safety_tools')
-            .update({'actions_cost': price})
+            .update({'actions_cost': newCost})
             .eq('name', toolName);
 
         print('🛠 Updated actions_cost for $toolName: $updateResponse');
-      } else {
-        print('⚠️ Skipped tool with empty name');
       }
     }
- print('🧪 Final tool_codes to send: ${jsonEncode(toolList)}');
+
+    print('🧪 Final tool_codes to send: ${jsonEncode(toolList)}');
     final updateExport = await supabase
         .from('export_requests')
         .update({
@@ -171,9 +314,6 @@ class _ExportRequestMaterialsPageState
           'tool_codes': toolList,
         })
         .eq('id', widget.requestId);
-    print('✅ Export request updated: $updateExport');
-    print('🧾 Final tool list: ${jsonEncode(toolList)}');
-    print(jsonEncode(toolList)); // هل يطبع شكل JSON سليم؟
 
     print('✅ Export request updated: $updateExport');
 
@@ -397,10 +537,13 @@ class _ExportRequestMaterialsPageState
                                       widget.isReadonly
                                           ? null
                                           : (val) {
-                                            request!['tool_codes'][i]['toolName'] =
-                                                val;
+                                            setState(() {
+                                              request!['tool_codes'][i]['toolName'] =
+                                                  val;
+                                            });
                                           },
                                 ),
+
                                 const SizedBox(height: 8),
                                 TextFormField(
                                   initialValue: item['note'],
@@ -458,17 +601,7 @@ class _ExportRequestMaterialsPageState
                                     buildEditableDropdown(
                                       i,
                                       'capacity',
-                                      item['material_type'] == 'البودرة الجافة'
-                                          ? [
-                                            '2',
-                                            '4',
-                                            '6',
-                                            '9',
-                                            '12',
-                                            '50',
-                                            '100',
-                                          ]
-                                          : ['2', '6'],
+                                      getCapacities(item['material_type']),
                                       'السعة',
                                     ),
                                 ],
@@ -478,6 +611,21 @@ class _ExportRequestMaterialsPageState
                                     'ثاني اكسيد الكربون',
                                     'البودرة الجافة',
                                   ], 'نوع المادة'),
+                                  TextFormField(
+                                    initialValue:
+                                        item['filled_amount']?.toString(),
+                                    readOnly: widget.isReadonly,
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                      labelText: 'كمية التعبئة (كغم)',
+                                    ),
+                                    onChanged:
+                                        widget.isReadonly
+                                            ? null
+                                            : (val) =>
+                                                request!['tool_codes'][i]['filled_amount'] =
+                                                    val,
+                                  ),
                                 ],
 
                                 if (item['action_name'] ==
@@ -485,8 +633,11 @@ class _ExportRequestMaterialsPageState
                                   buildEditableDropdown(i, 'material_type', [
                                     'ثاني اكسيد الكربون',
                                     'البودرة الجافة',
-                                    'جميع انواع الطفايات',
+                                    'الرغوة (B.C.F)',
+                                    'الماء',
+                                    'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي',
                                   ], 'نوع المادة'),
+
                                   if (item['material_type'] ==
                                       'ثاني اكسيد الكربون')
                                     buildEditableDropdown(i, 'component_name', [
@@ -497,8 +648,11 @@ class _ExportRequestMaterialsPageState
                                     buildEditableDropdown(i, 'component_name', [
                                       'سعر رأس الطفاية كامل لطفاية البودرة مع المقبض و الخرطوم و السيفون الداخلي و ساعة الضغط و مسمار الأمان',
                                     ], 'اسم القطعة')
-                                  else if (item['material_type'] ==
-                                      'جميع انواع الطفايات')
+                                  else if ([
+                                    'الرغوة (B.C.F)',
+                                    'الماء',
+                                    'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي',
+                                  ].contains(item['material_type']))
                                     buildEditableDropdown(i, 'component_name', [
                                       'خرطوم طفاية حريق',
                                       'سلندر خارجي لطفاية الحريق',

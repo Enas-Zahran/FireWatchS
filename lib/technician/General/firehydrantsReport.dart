@@ -353,21 +353,24 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
                                     : () => showDialog(
                                       context: context,
                                       builder:
-                                          (_) => AlertDialog(
-                                            title: Text('ملاحظات لـ $step'),
-                                            content: TextFormField(
-                                              controller: notes[step],
-                                              maxLines: 4,
-                                              textAlign: TextAlign.right,
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed:
-                                                    () =>
-                                                        Navigator.pop(context),
-                                                child: const Text('تم'),
+                                          (_) => Directionality(
+                                            textDirection: ui.TextDirection.rtl,
+                                            child: AlertDialog(
+                                              title: Text('ملاحظات لـ $step'),
+                                              content: TextFormField(
+                                                controller: notes[step],
+                                                maxLines: 4,
+                                                textAlign: TextAlign.right,
                                               ),
-                                            ],
+                                              actions: [
+                                                TextButton(
+                                                  onPressed:
+                                                      () =>
+                                                          Navigator.pop(context),
+                                                  child: const Text('تم'),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                     ),
                           ),

@@ -57,7 +57,7 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
       'action_name': _actionName,
       'tool_type': _toolType,
       'material_type': _materialType,
-      'capacity': _capacity,
+      if (_actionName == 'صيانة') 'capacity': _capacity,
       'component_name': _componentName,
       'price': price,
     }..removeWhere((key, value) => value == null);
@@ -139,17 +139,36 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
                   buildMaterialDropdown([
                     'ثاني اكسيد الكربون',
                     'البودرة الجافة',
-                    'جميع انواع الطفايات',
+                    'الرغوة (B.C.F)',
+                    'الماء',
+                    'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي',
                   ]),
+
                   const SizedBox(height: 12),
-                  if (_materialType == 'ثاني اكسيد الكربون')
-                    buildComponentDropdown(['محبس طفاية CO2'])
-                  else if (_materialType == 'البودرة الجافة')
-                    buildComponentDropdown([
-                      'سعر رأس الطفاية كامل لطفاية البودرة مع المقبض و الخرطوم و السيفون الداخلي و ساعة الضغط و مسمار الأمان',
-                    ])
-                  else if (_materialType == 'جميع انواع الطفايات')
-                    buildComponentDropdown(componentNamesAll),
+                  if (_materialType != null)
+                    buildComponentDropdown(
+                      (() {
+                        if (_materialType == 'ثاني اكسيد الكربون') {
+                          return <String>[
+                            'محبس طفاية CO2',
+                            ...componentNamesAll,
+                          ];
+                        } else if (_materialType == 'البودرة الجافة') {
+                          return <String>[
+                            'سعر رأس الطفاية كامل لطفاية البودرة مع المقبض و الخرطوم و السيفون الداخلي و ساعة الضغط و مسمار الأمان',
+                            ...componentNamesAll,
+                          ];
+                        } else if ([
+                          'الرغوة (B.C.F)',
+                          'الماء',
+                          'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي',
+                        ].contains(_materialType)) {
+                          return componentNamesAll;
+                        } else {
+                          return <String>[];
+                        }
+                      })(),
+                    ),
                 ],
 
                 const SizedBox(height: 12),
@@ -206,10 +225,12 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
     final caps = capacitiesByMaterial[_materialType]!;
     return DropdownButtonFormField<String>(
       value: _capacity,
-      decoration: customInputDecoration.copyWith(labelText: 'السعة (كغم)'),
+      decoration: customInputDecoration.copyWith(labelText: 'السعة'),
       items:
           caps
-              .map((e) => DropdownMenuItem(value: e, child: Text('$e كغم')))
+              .map(
+                (e) => DropdownMenuItem(value: '$e kg', child: Text('$e kg')),
+              )
               .toList(),
       onChanged: (val) => setState(() => _capacity = val),
       validator: (val) => val == null ? 'يرجى اختيار السعة' : null,

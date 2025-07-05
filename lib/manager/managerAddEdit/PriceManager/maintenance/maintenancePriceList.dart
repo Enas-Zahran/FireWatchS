@@ -21,9 +21,7 @@ class _MaintenancePricesListPageState extends State<MaintenancePricesListPage> {
     'الرغوة (B.C.F)',
     'الماء',
     'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي',
-    'بودرة',
-    'CO2',
-    'جميع انواع الطفايات',
+
   ];
   final List<String> capacities = ['2', '4', '6', '9', '12', '50', '100'];
 
@@ -166,7 +164,7 @@ class _MaintenancePricesListPageState extends State<MaintenancePricesListPage> {
                         child: ListTile(
                           title: Text('${item['action_name']}${item['tool_type'] != null ? ' - ${item['tool_type']}' : ''}'
                               '${item['material_type'] != null ? ' - ${item['material_type']}' : ''}'
-                              '${item['capacity'] != null ? ' - ${item['capacity']} كغم' : ''}'
+                              '${item['capacity'] != null ? ' - ${item['capacity']} ' : ''}'
                               '${item['component_name'] != null ? ' - ${item['component_name']}' : ''}'),
                           subtitle: Text('السعر: ${item['price']} د.أ'),
                         trailing: Row(
@@ -195,8 +193,9 @@ class _MaintenancePricesListPageState extends State<MaintenancePricesListPage> {
               title: const Text('تأكيد الحذف'),
               content: const Text('هل أنت متأكد أنك تريد حذف هذا السعر؟'),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
                 TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+                
               ],
             ),
           ),

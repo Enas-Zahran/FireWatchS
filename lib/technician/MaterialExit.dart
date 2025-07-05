@@ -52,19 +52,33 @@ class _MaterialExitAuthorizationPageState
   Widget buildCapacityDropdown(int index) {
     final selected = materials[index]['material_type'];
     final capacities = {
-      'البودرة الجافة': ['2', '4', '6', '9', '12', '50', '100'],
-      'ثاني اكسيد الكربون': ['2', '6'],
+      'البودرة الجافة': [
+        '2 kg',
+        '4 kg',
+        '6 kg',
+        '9 kg',
+        '12 kg',
+        '50 kg',
+        '100 kg',
+      ],
+      'ثاني اكسيد الكربون': ['2 kg', '6 kg'],
     };
 
-    if (selected == null || !capacities.containsKey(selected))
+    if (selected == null || !capacities.containsKey(selected)) {
       return const SizedBox.shrink();
+    }
+
+    final value = materials[index]['capacity'];
+    final availableOptions = capacities[selected]!;
+
+    final safeValue = availableOptions.contains(value) ? value : null;
 
     return DropdownButtonFormField<String>(
-      value: materials[index]['capacity'],
+      value: safeValue,
       decoration: const InputDecoration(labelText: 'السعة'),
       items:
-          capacities[selected]!
-              .map((e) => DropdownMenuItem(value: e, child: Text('$e كغم')))
+          availableOptions
+              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
               .toList(),
       onChanged: (val) => setState(() => materials[index]['capacity'] = val),
     );
@@ -131,6 +145,12 @@ class _MaterialExitAuthorizationPageState
             uniqueMap[toolName] = {
               'toolName': toolName,
               'note': item['note'] ?? '',
+              'action_name': item['action_name'],
+              'material_type': item['material_type'],
+              'capacity': item['capacity'],
+              'component_name': item['component_name'],
+              'filled_amount': item['filled_amount'],
+              'tool_type': item['tool_type'] ?? 'fire extinguisher',
             };
           }
         }
@@ -247,6 +267,16 @@ class _MaterialExitAuthorizationPageState
     });
   }
 
+  final Map<String, List<String>> materialOptions = {
+    'fire extinguisher': [
+      'ثاني اكسيد الكربون',
+      'البودرة الجافة',
+      'الرغوة (B.C.F)',
+      'الماء',
+      'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي',
+    ],
+  };
+
   void _removeMaterial(int index) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -358,8 +388,16 @@ class _MaterialExitAuthorizationPageState
                           decoration: const InputDecoration(
                             labelText: 'اسم الأداة',
                           ),
-                          onChanged:
-                              (val) => materials[index]['toolName'] = val,
+                          onChanged: (val) async {
+                            final toolData =
+                                await Supabase.instance.client
+                                    .from('safety_tools')
+                                    .select(
+                                      'material_type, capacity, tool_type',
+                                    )
+                                    .eq('name', val)
+                                    .maybeSingle();
+                          },
                         ),
                         TextFormField(
                           initialValue: material['note'],
@@ -400,22 +438,55 @@ class _MaterialExitAuthorizationPageState
                             'ثاني اكسيد الكربون',
                             'البودرة الجافة',
                           ]),
+                          TextFormField(
+                            initialValue: material['filled_amount']?.toString(),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'كمية التعبئة (كغم)',
+                            ),
+                            onChanged: (val) {
+                              setState(() {
+                                materials[index]['filled_amount'] =
+                                    double.tryParse(val);
+                              });
+                            },
+                          ),
                         ] else if (material['action_name'] ==
                             'تركيب قطع غيار') ...[
                           buildMaterialDropdown(index, [
                             'ثاني اكسيد الكربون',
                             'البودرة الجافة',
-                            'جميع انواع الطفايات',
+                            'الرغوة (B.C.F)',
+                            'الماء',
+                            'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي',
                           ]),
+
                           if (material['material_type'] == 'ثاني اكسيد الكربون')
-                            buildComponentDropdown(index, ['محبس طفاية CO2'])
+                            buildComponentDropdown(index, [
+                              'محبس طفاية CO2',
+                              'خرطوم طفاية حريق',
+                              'سلندر خارجي لطفاية الحريق',
+                              'ساعة ضغط',
+                              'مقبض طفاية الحريق',
+                              'قاذف طفاية الحريق',
+                              'طقم جلود(كسكيت)',
+                            ])
                           else if (material['material_type'] ==
                               'البودرة الجافة')
                             buildComponentDropdown(index, [
                               'سعر رأس الطفاية كامل لطفاية البودرة مع المقبض و الخرطوم و السيفون الداخلي و ساعة الضغط و مسمار الأمان',
+                              'خرطوم طفاية حريق',
+                              'سلندر خارجي لطفاية الحريق',
+                              'ساعة ضغط',
+                              'مقبض طفاية الحريق',
+                              'قاذف طفاية الحريق',
+                              'طقم جلود(كسكيت)',
                             ])
-                          else if (material['material_type'] ==
-                              'جميع انواع الطفايات')
+                          else if ([
+                            'الرغوة (B.C.F)',
+                            'الماء',
+                            'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي',
+                          ].contains(material['material_type']))
                             buildComponentDropdown(index, [
                               'خرطوم طفاية حريق',
                               'سلندر خارجي لطفاية الحريق',
