@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/toolReports.dart';
 import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/toolsAction.dart';
-import 'dart:ui'as ui;
+import 'dart:ui' as ui;
+
 class ToolDetailsPage extends StatelessWidget {
   final Map<String, dynamic> tool;
 
@@ -28,8 +29,14 @@ class ToolDetailsPage extends StatelessWidget {
     final price = (tool['price'] as num?)?.toDouble();
     final lastMaintenance = formatDate(tool['last_maintenance_date']);
     final nextMaintenance = formatDate(tool['next_maintenance_date']);
+    final totalCosts = (tool['total_cost'] as num?)?.toDouble();
+    final totalCostsText =
+        totalCosts != null
+            ? '${totalCosts.toStringAsFixed(2)} د.أ'
+            : 'غير متاح';
 
-    final priceText = price != null ? '${price.toStringAsFixed(2)} د.أ' : 'غير متاح';
+    final priceText =
+        price != null ? '${price.toStringAsFixed(2)} د.أ' : 'غير متاح';
 
     return Directionality(
       textDirection: ui.TextDirection.rtl,
@@ -61,44 +68,9 @@ class ToolDetailsPage extends StatelessWidget {
                   buildInfoTile('الصيانة القادمة', nextMaintenance),
                   const SizedBox(height: 12),
                   buildInfoTile('السعر الأساسي', priceText, bold: true),
+                  buildInfoTile('مجموع التكاليف', totalCostsText, bold: true),
+
                   const SizedBox(height: 40),
-                  SizedBox(
-                    width: 400,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ToolReportsPage(toolId: tool['id']),
-                          ),
-                        );
-                      },
-                      child: const Text('عرض جميع التقارير', style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xff00408b),
-                        minimumSize: const Size(400, 50),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: 400,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ToolActionsPage(toolId: tool['id']),
-                          ),
-                        );
-                      },
-                      child: const Text('عرض جميع الإجراءات', style: TextStyle(color: Colors.white)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xff00408b),
-                        minimumSize: const Size(400, 50),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -116,7 +88,7 @@ class ToolDetailsPage extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-               Text(
+            Text(
               label,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
@@ -128,7 +100,6 @@ class ToolDetailsPage extends StatelessWidget {
                 color: bold ? const Color(0xff00408b) : Colors.black87,
               ),
             ),
-         
           ],
         ),
       ),

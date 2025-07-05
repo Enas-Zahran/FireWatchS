@@ -299,7 +299,8 @@ class _ExportRequestMaterialsPageState
 
         final updateResponse = await supabase
     .from('safety_tools')
-    .update({'actions_cost': newCost})
+    .update({'actions_cost': newCost,
+    'status': 'خارج الخدمة', })
     .eq('name', toolName)
     .select(); // ✅ هذا مهم ليعطيك بيانات التحديث
 

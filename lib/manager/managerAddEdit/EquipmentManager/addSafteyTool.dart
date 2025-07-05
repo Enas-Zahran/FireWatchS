@@ -70,14 +70,21 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
     final toolName = _nameController.text.trim();
     final toolCode = toolName.isNotEmpty ? toolName[0].toUpperCase() : '';
 
-    if (!locationCodes.contains(toolCode)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('⚠️ لا يوجد مكان لهذا الرمز، يرجى التأكد من أول حرف في اسم الأداة.'),
-        ),
-      );
-      return;
-    }
+   final location = await Supabase.instance.client
+    .from('locations')
+    .select('id')
+    .eq('code', toolCode)
+    .maybeSingle();
+
+if (location == null) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('⚠️ لا يوجد مكان لهذا الرمز، يرجى التأكد من أول حرف في اسم الأداة.'),
+    ),
+  );
+  return;
+}
+final locationId = location['id'];
 
     final existing = await Supabase.instance.client
         .from('safety_tools')
@@ -122,6 +129,7 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
         'purchase_date': _purchaseDate!.toIso8601String(),
         'last_maintenance_date': DateTime.now().toIso8601String(),
         'next_maintenance_date': nextMaintenanceDate.toIso8601String(),
+         'location_id': locationId,
       });
 
       if (!mounted) return;

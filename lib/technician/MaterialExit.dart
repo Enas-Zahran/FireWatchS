@@ -124,11 +124,7 @@ class _MaterialExitAuthorizationPageState
             .from('export_requests')
             .select()
             .eq('created_by', user.id)
-            .filter(
-              'is_approved',
-              'is',
-              null,
-            ) // فقط الطلبات اللي لسا ما تم اعتمادها أو رفضها
+            .filter('is_approved', 'is', null) // Only unapproved requests
             .order('created_at', ascending: false)
             .limit(1)
             .maybeSingle();
@@ -137,6 +133,8 @@ class _MaterialExitAuthorizationPageState
       requestId = response['id'];
 
       final List<dynamic>? toolList = response['tool_codes'];
+      final returnDateStr = response['return_date'];
+
       if (toolList != null) {
         final uniqueMap = <String, Map<String, dynamic>>{};
         for (final item in toolList) {
@@ -155,6 +153,24 @@ class _MaterialExitAuthorizationPageState
           }
         }
         materials = uniqueMap.values.toList();
+      }
+
+      // ✅ Update tool status if return date has passed
+      final now = DateTime.now();
+      if (returnDateStr != null) {
+        final returnDate = DateTime.tryParse(returnDateStr);
+        if (returnDate != null && now.isAfter(returnDate)) {
+          for (final tool in materials) {
+            final toolName = tool['toolName'];
+            if (toolName != null && toolName is String) {
+              await supabase
+                  .from('safety_tools')
+                  .update({'status': 'صالحة'})
+                  .eq('name', toolName)
+                  .select();
+            }
+          }
+        }
       }
     }
 
