@@ -207,6 +207,7 @@ class _ExportRequestMaterialsPageState
 
   Future<void> _approveRequest() async {
     print('🔧 Starting approval process...');
+    print('🔑 Request ID: ${widget.requestId}');
 
     if (managerSignature.isEmpty) {
       print('❌ Manager signature is empty');
@@ -225,6 +226,22 @@ class _ExportRequestMaterialsPageState
       return;
     }
 
+    // ✅ تأكد من وجود الطلب فعلاً
+    final existing =
+        await supabase
+            .from('export_requests')
+            .select('id')
+            .eq('id', widget.requestId)
+            .maybeSingle();
+
+    if (existing == null) {
+      print('❌ No export request found with id ${widget.requestId}');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('الطلب غير موجود')));
+      return;
+    }
+
     final toolList = request?['tool_codes'] as List<dynamic>? ?? [];
     print('📦 Found ${toolList.length} materials to process');
 
@@ -232,27 +249,12 @@ class _ExportRequestMaterialsPageState
       final tool = toolList[i];
       final toolName = tool['toolName']?.toString().trim();
       final action = tool['action_name'];
-      final materialType = tool['material_type'];
-      final capacity = tool['capacity'];
-      final componentName = tool['component_name'];
-      final filledAmount = tool['filled_amount'];
-      final type = tool['type'];
 
-      bool isValid = true;
-
-      if (toolName == null || toolName.isEmpty || action == null) {
-        isValid = false;
-      } else if (action == 'صيانة') {
-        isValid = (materialType != null && capacity != null && type != null);
-      } else if (action == 'تركيب قطع غيار') {
-        isValid =
-            (materialType != null && componentName != null && type != null);
-      } else if (action == 'تعبئة') {
-        isValid =
-            (materialType != null && filledAmount != null && type != null);
-      }
-
-      tool['is_matching'] = isValid;
+      tool['is_matching'] =
+          (toolName != null &&
+              toolName.isNotEmpty &&
+              action != null &&
+              action.toString().trim().isNotEmpty);
     }
 
     for (final material in toolList) {
@@ -283,17 +285,23 @@ class _ExportRequestMaterialsPageState
                 .eq('name', toolName)
                 .maybeSingle();
 
+        if (previous == null) {
+          print('❌ Tool $toolName not found in safety_tools table!');
+          continue;
+        }
+
         final previousCost =
-            (previous?['actions_cost'] ?? 0) is int
-                ? (previous?['actions_cost'] ?? 0).toDouble()
-                : (previous?['actions_cost'] ?? 0) as double;
+            (previous['actions_cost'] ?? 0) is int
+                ? (previous['actions_cost'] ?? 0).toDouble()
+                : (previous['actions_cost'] ?? 0) as double;
 
         final newCost = previousCost + price;
 
         final updateResponse = await supabase
-            .from('safety_tools')
-            .update({'actions_cost': newCost})
-            .eq('name', toolName);
+    .from('safety_tools')
+    .update({'actions_cost': newCost})
+    .eq('name', toolName)
+    .select(); // ✅ هذا مهم ليعطيك بيانات التحديث
 
         print('🛠 Updated actions_cost for $toolName: $updateResponse');
       }
