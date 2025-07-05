@@ -219,8 +219,25 @@ class _AllToolsPageState extends State<AllToolsPage> {
                                             ListTile(
                                               contentPadding: EdgeInsets.zero,
                                               title: Text(tool['name'] ?? ''),
-                                              subtitle: Text(
-                                                '${tool['type']} - ${tool['capacity']}',
+                                              subtitle: Column(
+                                                children: [
+                                                  Text(
+                                                    '${tool['type']} - ${tool['capacity']}',
+                                                  ),
+                                                  if (tool['status'] != null)
+                                                    Text(
+                                                      'الحالة: ${tool['status']}',
+                                                      style: TextStyle(
+                                                        color:
+                                                            tool['status'] ==
+                                                                    'صالحة'
+                                                                ? Colors.green
+                                                                : Colors.red,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                ],
                                               ),
                                               trailing: Column(
                                                 crossAxisAlignment:
