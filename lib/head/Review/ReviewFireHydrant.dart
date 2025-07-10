@@ -35,6 +35,7 @@ class _FireHydrantHeadReviewPageState extends State<FireHydrantHeadReviewPage> {
   String? companyName, technicianName;
   final TextEditingController companyRep = TextEditingController();
   final TextEditingController otherNotes = TextEditingController();
+  Map<String, dynamic>? reportData;
 
   List<String> steps = [
     'تفقد الصمام الرئيسي والصمامات الفرعية .',
@@ -52,6 +53,8 @@ class _FireHydrantHeadReviewPageState extends State<FireHydrantHeadReviewPage> {
 
   bool isApproved = false;
   bool loading = true;
+  String? technicianSignatureBase64;
+  String? companySignatureBase64;
 
   @override
   void initState() {
@@ -70,7 +73,9 @@ class _FireHydrantHeadReviewPageState extends State<FireHydrantHeadReviewPage> {
             .select()
             .eq('task_id', widget.taskId)
             .maybeSingle();
+
     if (data == null) return;
+    reportData = data;
 
     currentDate = DateTime.tryParse(data['inspection_date'] ?? '');
     nextDate = DateTime.tryParse(data['next_inspection_date'] ?? '');
@@ -80,6 +85,11 @@ class _FireHydrantHeadReviewPageState extends State<FireHydrantHeadReviewPage> {
     otherNotes.text = data['other_notes'] ?? '';
     isApproved = data['head_approved'] == true;
 
+    // ✅ Add signature fields
+    technicianSignatureBase64 = data['technician_signature'];
+    companySignatureBase64 = data['company_signature'];
+
+    // ✅ Load inspection steps
     if (data['steps'] != null) {
       for (final item in data['steps']) {
         final step = item['step'];
@@ -94,129 +104,140 @@ class _FireHydrantHeadReviewPageState extends State<FireHydrantHeadReviewPage> {
   }
 
   Future<void> _saveEdits() async {
-    if (headSignature.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى توقيع رئيس الشعبة قبل الاعتماد')),
-      );
-      return;
-    }
+    try {
+      print('🔄 Starting _saveEdits');
 
-    final signatureBytes = await headSignature.toPngBytes();
-    final signatureBase64 = base64Encode(signatureBytes!);
-
-    final editedSteps =
-        steps.map((step) {
-          return {
-            'step': step,
-            'checked': checks[step] ?? false,
-            'note': notes[step]?.text ?? '',
-          };
-        }).toList();
-
-    // 🔍 Fetch original report
-    final original =
-        await supabase
-            .from('fire_hydrant_reports')
-            .select()
-            .eq('task_id', widget.taskId)
-            .maybeSingle();
-
-    // 📋 Fields to update
-    final updates = {
-      'steps': editedSteps,
-      'company_rep': companyRep.text.trim(),
-      'other_notes': otherNotes.text.trim(),
-      'head_approved': true,
-      'head_name': widget.headName,
-      'head_signature': signatureBase64,
-    };
-
-    // 🧠 Helper to track edits
-    Future<void> saveEdit(
-      String fieldName,
-      String? oldVal,
-      String? newVal,
-    ) async {
-      if ((oldVal ?? '').trim() != (newVal ?? '').trim()) {
-        await supabase.from('head_edits').insert({
-          'task_id': widget.taskId,
-          'field_name': fieldName,
-          'technician_value': oldVal ?? '',
-          'head_value': newVal ?? '',
-          'head_name': widget.headName,
-          'head_id': supabase.auth.currentUser?.id,
-        });
-      }
-    }
-
-    // 📝 Compare top-level fields
-    await saveEdit(
-      'company_rep',
-      original?['company_rep'],
-      companyRep.text.trim(),
-    );
-    await saveEdit(
-      'other_notes',
-      original?['other_notes'],
-      otherNotes.text.trim(),
-    );
-
-    // 🧾 Compare step edits
-    if (original != null &&
-        original['steps'] != null &&
-        original['steps'] is List) {
-      for (final step in editedSteps) {
-        final label = step['step'];
-        final originalStep = (original['steps'] as List).firstWhere(
-          (s) => s['step'] == label,
-          orElse: () => null,
+      if (headSignature.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('يرجى توقيع رئيس الشعبة قبل الاعتماد')),
         );
+        print('⚠️ Signature is empty, exiting...');
+        return;
+      }
 
-        if (originalStep != null) {
-          final bool oldChecked = originalStep['checked'] == true;
-          final bool newChecked = step['checked'] == true;
+      final signatureBytes = await headSignature.toPngBytes();
+      if (signatureBytes == null) {
+        print('❌ Failed to convert signature to bytes.');
+        return;
+      }
+      final signatureBase64 = base64Encode(signatureBytes);
+      print('✅ Signature captured');
 
-          if (oldChecked != newChecked) {
-            await saveEdit(
-              'الخطوة: $label - checked',
-              oldChecked.toString(),
-              newChecked.toString(),
-            );
-          }
+      final editedSteps =
+          steps.map((step) {
+            return {
+              'step': step,
+              'checked': checks[step] ?? false,
+              'note': notes[step]?.text ?? '',
+            };
+          }).toList();
+      print('✅ Steps ready: ${editedSteps.length}');
 
-          final oldNote = (originalStep['note'] ?? '').toString();
-          final newNote = (step['note'] ?? '').toString();
+      final original =
+          await supabase
+              .from('fire_hydrant_reports')
+              .select()
+              .eq('task_id', widget.taskId)
+              .maybeSingle();
+      print('📄 Original report fetched: ${original != null}');
 
-          if (oldNote.trim() != newNote.trim()) {
-            await saveEdit('الخطوة: $label - note', oldNote, newNote);
-          }
+      final updates = {
+        'steps': editedSteps,
+        'company_rep': companyRep.text.trim(),
+        'other_notes': otherNotes.text.trim(),
+        'head_approved': true,
+        'head_name': widget.headName,
+        'head_signature': signatureBase64,
+      };
+      print('✅ Update object built');
+
+      Future<void> saveEdit(
+        String fieldName,
+        String? oldVal,
+        String? newVal,
+      ) async {
+        if ((oldVal ?? '').trim() != (newVal ?? '').trim()) {
+          print('✏️ Field edited: $fieldName');
+          await supabase.from('head_edits').insert({
+            'task_id': widget.taskId,
+            'task_type': widget.taskType,
+            'field_name': fieldName,
+            'technician_value': oldVal ?? '',
+            'head_value': newVal ?? '',
+            'head_name': widget.headName,
+            'head_id': supabase.auth.currentUser?.id,
+          });
         }
       }
-    }
 
-    // ✅ Save updated report
-    await supabase
-        .from('fire_hydrant_reports')
-        .update(updates)
-        .eq('task_id', widget.taskId);
+      await saveEdit(
+        'company_rep',
+        original?['company_rep'],
+        companyRep.text.trim(),
+      );
+      await saveEdit(
+        'other_notes',
+        original?['other_notes'],
+        otherNotes.text.trim(),
+      );
 
-    if (mounted) {
-      setState(() => isApproved = true);
+      if (original != null &&
+          original['steps'] != null &&
+          original['steps'] is List) {
+        for (final step in editedSteps) {
+          final label = step['step'];
+          final originalStep = (original['steps'] as List).firstWhere(
+            (s) => s['step'] == label,
+            orElse: () => null,
+          );
+
+          if (originalStep != null) {
+            final bool oldChecked = originalStep['checked'] == true;
+            final bool newChecked = step['checked'] == true;
+
+            if (oldChecked != newChecked) {
+              await saveEdit(
+                'الخطوة: $label - checked',
+                oldChecked.toString(),
+                newChecked.toString(),
+              );
+            }
+
+            final oldNote = (originalStep['note'] ?? '').toString();
+            final newNote = (step['note'] ?? '').toString();
+
+            if (oldNote.trim() != newNote.trim()) {
+              await saveEdit('الخطوة: $label - note', oldNote, newNote);
+            }
+          } else {
+            print('⚠️ Step "$label" not found in original report.');
+          }
+        }
+      } else {
+        print('⚠️ No original steps to compare');
+      }
+
+      print('🚀 Submitting update to fire_hydrant_reports...');
+      await supabase
+          .from('fire_hydrant_reports')
+          .update(updates)
+          .eq('task_id', widget.taskId);
+
+      if (mounted) {
+        setState(() => isApproved = true);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('تم اعتماد التقرير')));
+      }
+
+      print('✅ Report successfully approved');
+    } catch (e, stack) {
+      print('❌ Exception in _saveEdits: $e');
+      print('📌 Stack trace:\n$stack');
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('تم اعتماد التقرير')));
+      ).showSnackBar(const SnackBar(content: Text('حدث خطأ أثناء الحفظ')));
     }
-  }
-
-  @override
-  void dispose() {
-    for (var controller in notes.values) {
-      controller.dispose();
-    }
-    companyRep.dispose();
-    otherNotes.dispose();
-    headSignature.dispose();
-    super.dispose();
   }
 
   @override
@@ -323,6 +344,30 @@ class _FireHydrantHeadReviewPageState extends State<FireHydrantHeadReviewPage> {
                               ),
                               const SizedBox(height: 8),
                               Text('الفني: ${technicianName ?? '---'}'),
+                              const SizedBox(height: 12),
+                              const Text('توقيع الفني:'),
+                              if (reportData?['technician_signature'] != null)
+                                Image.memory(
+                                  base64Decode(
+                                    reportData!['technician_signature'],
+                                  ),
+                                  height: 100,
+                                  fit: BoxFit.contain,
+                                )    
+                              else
+                                const Text('لا يوجد توقيع'),
+                              const SizedBox(height: 12),
+                              const Text('توقيع مندوب الشركة:'),
+                              if (reportData?['company_signature'] != null)
+                                Image.memory(
+                                  base64Decode(
+                                    reportData!['company_signature'],
+                                  ),
+                                  height: 100,
+                                  fit: BoxFit.contain,
+                                )
+                              else
+                                const Text('لا يوجد توقيع'),
                             ],
                           ),
                         ),

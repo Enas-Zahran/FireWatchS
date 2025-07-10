@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:signature/signature.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui' as ui;
+import 'dart:convert';
 
 class FireHydrantReportPage extends StatefulWidget {
   final String taskId;
@@ -39,6 +40,7 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
   final TextEditingController otherNotesController = TextEditingController();
   String? companyName;
   String? technicianName;
+  Map<String, dynamic>? reportData;
 
   final List<String> steps = [
     'تفقد الصمام الرئيسي والصمامات الفرعية .',
@@ -60,6 +62,32 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
     }
     _fetchTechnician();
     _fetchCompany();
+    if (widget.isReadonly) {
+      _loadReportData(); // 👈 Load saved data if read-only
+    }
+  }
+
+  Future<void> _loadReportData() async {
+    final data =
+        await supabase
+            .from('fire_hydrant_reports')
+            .select()
+            .eq('task_id', widget.taskId)
+            .maybeSingle();
+
+    if (data != null) {
+      setState(() {
+        reportData = data;
+        if (data['inspection_date'] != null) {
+          currentDate = DateTime.parse(data['inspection_date']);
+        }
+        if (data['next_inspection_date'] != null) {
+          nextDate = DateTime.parse(data['next_inspection_date']);
+        }
+        otherNotesController.text = data['other_notes'] ?? '';
+        companyRep.text = data['company_rep'] ?? '';
+      });
+    }
   }
 
   Future<void> _fetchTechnician() async {
@@ -111,10 +139,25 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
   }
 
   Future<void> _submitReport() async {
+    final techImage = await technicianSignature.toImage();
+    final techByteData = await techImage?.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    final techSigBytes = techByteData?.buffer.asUint8List();
+
+    final companyImage = await companySignature.toImage();
+    final companyByteData = await companyImage?.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    final companySigBytes = companyByteData?.buffer.asUint8List();
+
+    print('🧪 techSigBytes: $techSigBytes');
+    print('🧪 companySigBytes: $companySigBytes');
+
     if (!_formKey.currentState!.validate() ||
         currentDate == null ||
-        technicianSignature.isEmpty ||
-        companySignature.isEmpty) {
+        techSigBytes == null ||
+        companySigBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
       );
@@ -135,8 +178,21 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
             )
             .toList();
 
+    final exportMaterials =
+        stepsData
+            .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
+            .map((s) => {'toolName': widget.toolName, 'note': s['note']})
+            .toList();
+
+    if (otherNotesController.text.trim().isNotEmpty) {
+      exportMaterials.add({
+        'toolName': widget.toolName,
+        'note': otherNotesController.text.trim(),
+      });
+    }
+
     try {
-      final insertData = {
+      await supabase.from('fire_hydrant_reports').insert({
         'tool_name': widget.toolName,
         'inspection_date': currentDate!.toIso8601String(),
         'next_inspection_date': nextDate!.toIso8601String(),
@@ -144,34 +200,23 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
         'company_rep': companyRep.text.trim(),
         'technician_name': technicianName,
         'steps': stepsData,
-        'technician_signed': true,
-        'company_signed': true,
         'other_notes': otherNotesController.text.trim(),
         'task_id': widget.taskId,
         'task_type': widget.taskType,
-      };
+        'technician_signed': true,
+        'company_signed': true,
+        'technician_signature': base64Encode(techSigBytes),
+        'company_signature': base64Encode(companySigBytes),
+      });
 
-      await supabase.from('fire_hydrant_reports').insert(insertData);
-      // final toolId = await _fetchToolIdByName(widget.toolName);
+      await supabase
+          .from('safety_tools')
+          .update({
+            'last_maintenance_date': currentDate!.toIso8601String(),
+            'next_maintenance_date': nextDate!.toIso8601String(),
+          })
+          .eq('name', widget.toolName);
 
-      //       if (toolId != null) {
-      //         await supabase
-      //             .from('safety_tools')
-      //             .update({
-      //               'last_maintenance_date': DateFormat(
-      //                 'yyyy-MM-dd',
-      //               ).format(currentDate!),
-      //               'next_maintenance_date': DateFormat(
-      //                 'yyyy-MM-dd',
-      //               ).format(nextDate!),
-      //             })
-      //             .eq('id', toolId);
-      //       } else {
-      //         print('❌ Tool ID not found for ${widget.toolName}');
-      //       }
-      // print('📦 Updating toolId: $toolId');
-
-      // ✅ Mark task as done based on task type
       if (widget.taskType == 'دوري') {
         await supabase
             .from('periodic_tasks')
@@ -189,21 +234,6 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
             .eq('id', widget.taskId);
       }
 
-      final exportMaterials =
-          stepsData
-              .where(
-                (s) => s['note'] != null && s['note'].toString().isNotEmpty,
-              )
-              .map((s) => {'toolName': widget.toolName, 'note': s['note']})
-              .toList();
-
-      if (otherNotesController.text.trim().isNotEmpty) {
-        exportMaterials.add({
-          'toolName': widget.toolName,
-          'note': otherNotesController.text.trim(),
-        });
-      }
-
       if (!mounted) return;
 
       if (exportMaterials.isNotEmpty) {
@@ -217,10 +247,13 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
                 .limit(1)
                 .maybeSingle();
 
+        final reasonText = exportMaterials.map((m) => m['note']).join(' - ');
+
         if (existing != null) {
-          final existingId = existing['id'];
-          final List<dynamic> currentTools = existing['tool_codes'] ?? [];
-          final updatedTools = [...currentTools, ...exportMaterials];
+          final updatedTools = [
+            ...(existing['tool_codes'] ?? []),
+            ...exportMaterials,
+          ];
 
           await supabase
               .from('export_requests')
@@ -228,15 +261,15 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
                 'tool_codes': updatedTools,
                 'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
               })
-              .eq('id', existingId);
+              .eq('id', existing['id']);
         } else {
           await supabase.from('export_requests').insert({
             'tool_codes': exportMaterials,
             'created_by': user.id,
             'created_by_name': technicianName,
             'created_by_role': 'فني السلامة العامة',
-            'usage_reason': exportMaterials.map((m) => m['note']).join(' - '),
-            'action_taken': 'التقرير ${widget.taskType} - صنبور حريق',
+            'usage_reason': reasonText,
+            'action_taken': 'تقرير ${widget.taskType} - صنبور الحريق',
             'is_approved': null,
             'is_submitted': false,
             'created_at': DateTime.now().toIso8601String(),
@@ -365,8 +398,9 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
                                               actions: [
                                                 TextButton(
                                                   onPressed:
-                                                      () =>
-                                                          Navigator.pop(context),
+                                                      () => Navigator.pop(
+                                                        context,
+                                                      ),
                                                   child: const Text('تم'),
                                                 ),
                                               ],
@@ -418,14 +452,18 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
                         ),
                         const SizedBox(height: 12),
                         const Text('توقيع مندوب الشركة:'),
-                        AbsorbPointer(
-                          absorbing: widget.isReadonly,
-                          child: Signature(
-                            controller: companySignature,
-                            height: 100,
-                            backgroundColor: Colors.grey[200]!,
-                          ),
-                        ),
+                        widget.isReadonly &&
+                                reportData?['company_signature'] != null
+                            ? Image.memory(
+                              base64Decode(reportData!['company_signature']),
+                              height: 100,
+                              fit: BoxFit.contain,
+                            )
+                            : Signature(
+                              controller: companySignature,
+                              height: 100,
+                              backgroundColor: Colors.grey[200]!,
+                            ),
                       ],
                     ),
                   ),
@@ -443,14 +481,18 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
                       children: [
                         Text('اسم الفني: ${technicianName ?? '...'}'),
                         const Text('توقيع الفني:'),
-                        AbsorbPointer(
-                          absorbing: widget.isReadonly,
-                          child: Signature(
-                            controller: technicianSignature,
-                            height: 100,
-                            backgroundColor: Colors.grey[200]!,
-                          ),
-                        ),
+                        widget.isReadonly &&
+                                reportData?['technician_signature'] != null
+                            ? Image.memory(
+                              base64Decode(reportData!['technician_signature']),
+                              height: 100,
+                              fit: BoxFit.contain,
+                            )
+                            : Signature(
+                              controller: technicianSignature,
+                              height: 100,
+                              backgroundColor: Colors.grey[200]!,
+                            ),
                       ],
                     ),
                   ),

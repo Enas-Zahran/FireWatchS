@@ -307,22 +307,22 @@ class _AllToolsPageState extends State<AllToolsPage> {
                                                                   onPressed:
                                                                       () => Navigator.pop(
                                                                         context,
-                                                                        false,
+                                                                        true,
                                                                       ),
                                                                   child:
                                                                       const Text(
-                                                                        'إلغاء',
+                                                                        'نعم',
                                                                       ),
                                                                 ),
                                                                 TextButton(
                                                                   onPressed:
                                                                       () => Navigator.pop(
                                                                         context,
-                                                                        true,
+                                                                        false,
                                                                       ),
                                                                   child:
                                                                       const Text(
-                                                                        'نعم',
+                                                                        'إلغاء',
                                                                       ),
                                                                 ),
                                                               ],

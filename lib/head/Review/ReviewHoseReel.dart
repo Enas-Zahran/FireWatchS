@@ -49,6 +49,9 @@ class _HoseReelHeadReviewPageState extends State<HoseReelHeadReviewPage> {
 
   bool isApproved = false;
   bool loading = true;
+  Map<String, dynamic>? reportData;
+  String? technicianSignatureBase64;
+  String? companySignatureBase64;
 
   @override
   void initState() {
@@ -67,6 +70,7 @@ class _HoseReelHeadReviewPageState extends State<HoseReelHeadReviewPage> {
             .select()
             .eq('task_id', widget.taskId)
             .maybeSingle();
+    reportData = data;
 
     if (data == null) return;
 
@@ -75,6 +79,9 @@ class _HoseReelHeadReviewPageState extends State<HoseReelHeadReviewPage> {
     companyName = data['company_name'];
     companyRep.text = data['company_rep'] ?? '';
     technicianName = data['technician_name'];
+    technicianSignatureBase64 = data['technician_signature'];
+    companySignatureBase64 = data['company_signature'];
+
     otherNotes.text = data['other_notes'] ?? '';
     isApproved = data['head_approved'] == true;
 
@@ -91,7 +98,7 @@ class _HoseReelHeadReviewPageState extends State<HoseReelHeadReviewPage> {
     setState(() => loading = false);
   }
 
-  Future<void> _approveReport() async {
+  Future<void> _saveEdits() async {
     if (headSignature.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('يرجى توقيع رئيس الشعبة قبل الاعتماد.')),
@@ -102,29 +109,100 @@ class _HoseReelHeadReviewPageState extends State<HoseReelHeadReviewPage> {
     final signatureBytes = await headSignature.toPngBytes();
     final signatureBase64 = base64Encode(signatureBytes!);
 
-    final updatedSteps =
-        steps
-            .map(
-              (step) => {
-                'step': step,
-                'checked': checks[step] ?? false,
-                'note': notes[step]?.text ?? '',
-              },
-            )
-            .toList();
+    final editedSteps =
+        steps.map((step) {
+          return {
+            'step': step,
+            'checked': checks[step] ?? false,
+            'note': notes[step]?.text ?? '',
+          };
+        }).toList();
 
-    final update = {
-      'steps': updatedSteps,
+    // 🔍 Fetch original report
+    final original =
+        await supabase
+            .from('hose_reel_reports')
+            .select()
+            .eq('task_id', widget.taskId)
+            .maybeSingle();
+
+    final updates = {
+      'steps': editedSteps,
       'other_notes': otherNotes.text.trim(),
       'company_rep': companyRep.text.trim(),
+      'head_approved': true,
       'head_name': widget.headName,
       'head_signature': signatureBase64,
-      'head_approved': true,
     };
 
+    // 🧠 Save edit helper
+    Future<void> saveEdit(
+      String fieldName,
+      String? oldVal,
+      String? newVal,
+    ) async {
+      if ((oldVal ?? '').trim() != (newVal ?? '').trim()) {
+        await supabase.from('head_edits').insert({
+          'task_id': widget.taskId,
+          'task_type': widget.taskType,
+          'field_name': fieldName,
+          'technician_value': oldVal ?? '',
+          'head_value': newVal ?? '',
+          'head_name': widget.headName,
+          'head_id': supabase.auth.currentUser?.id,
+        });
+      }
+    }
+
+    // 📝 Save simple fields
+    await saveEdit(
+      'company_rep',
+      original?['company_rep'],
+      companyRep.text.trim(),
+    );
+    await saveEdit(
+      'other_notes',
+      original?['other_notes'],
+      otherNotes.text.trim(),
+    );
+
+    // 🧾 Compare steps
+    if (original != null &&
+        original['steps'] != null &&
+        original['steps'] is List) {
+      for (final step in editedSteps) {
+        final label = step['step'];
+        final originalStep = (original['steps'] as List).firstWhere(
+          (s) => s['step'] == label,
+          orElse: () => null,
+        );
+
+        if (originalStep != null) {
+          final bool oldChecked = originalStep['checked'] == true;
+          final bool newChecked = step['checked'] == true;
+
+          if (oldChecked != newChecked) {
+            await saveEdit(
+              'الخطوة: $label - checked',
+              oldChecked.toString(),
+              newChecked.toString(),
+            );
+          }
+
+          final oldNote = (originalStep['note'] ?? '').toString();
+          final newNote = (step['note'] ?? '').toString();
+
+          if (oldNote.trim() != newNote.trim()) {
+            await saveEdit('الخطوة: $label - note', oldNote, newNote);
+          }
+        }
+      }
+    }
+
+    // ✅ Update final report
     await supabase
         .from('hose_reel_reports')
-        .update(update)
+        .update(updates)
         .eq('task_id', widget.taskId);
 
     if (mounted) {
@@ -249,8 +327,27 @@ class _HoseReelHeadReviewPageState extends State<HoseReelHeadReviewPage> {
                                   labelText: 'اسم مندوب الشركة',
                                 ),
                               ),
+                              const Text('توقيع مندوب الشركة:'),
+                              if (companySignatureBase64 != null)
+                                Image.memory(
+                                  base64Decode(companySignatureBase64!),
+                                  height: 100,
+                                  fit: BoxFit.contain,
+                                )
+                              else
+                                const Text('لا يوجد توقيع'),
+
                               const SizedBox(height: 8),
                               Text('الفني: ${technicianName ?? '---'}'),
+                              const Text('توقيع الفني:'),
+                              if (technicianSignatureBase64 != null)
+                                Image.memory(
+                                  base64Decode(technicianSignatureBase64!),
+                                  height: 100,
+                                  fit: BoxFit.contain,
+                                )
+                              else
+                                const Text('لا يوجد توقيع'),
                             ],
                           ),
                         ),
@@ -273,7 +370,7 @@ class _HoseReelHeadReviewPageState extends State<HoseReelHeadReviewPage> {
                           child: ElevatedButton.icon(
                             icon: const Icon(Icons.check),
                             label: const Text('اعتماد التقرير'),
-                            onPressed: _approveReport,
+                            onPressed: _saveEdits,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xff00408b),
                               foregroundColor: Colors.white,

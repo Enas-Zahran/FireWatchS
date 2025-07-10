@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:signature/signature.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui' as ui;
+import 'dart:convert';
 
 class FireExtinguisherCorrectiveEmergency extends StatefulWidget {
   final String taskId;
@@ -33,6 +34,7 @@ class _FireExtinguisherCorrectiveEmergencyState
   final SignatureController technicianSignature = SignatureController(
     penStrokeWidth: 2,
   );
+
   final SignatureController companySignature = SignatureController(
     penStrokeWidth: 2,
   );
@@ -57,12 +59,37 @@ class _FireExtinguisherCorrectiveEmergencyState
   @override
   void initState() {
     super.initState();
+
     for (var step in steps) {
       checks[step] = false;
       notes[step] = TextEditingController();
     }
     _fetchTechnician();
     _fetchCompany();
+    if (widget.isReadonly) _loadReportData();
+  }
+
+  Future<void> _loadReportData() async {
+    final data =
+        await supabase
+            .from('fire_extinguisher_correctiveemergency')
+            .select()
+            .eq('task_id', widget.taskId)
+            .eq('tool_name', widget.toolName)
+            .eq('task_type', widget.taskType)
+            .maybeSingle();
+
+    if (data != null) {
+      setState(() {
+        reportData = data;
+        currentDate = DateTime.tryParse(data['inspection_date'] ?? '');
+        nextDate = DateTime.tryParse(data['next_inspection_date'] ?? '');
+        companyRep.text = data['company_rep'] ?? '';
+        otherNotesController.text = data['other_notes'] ?? '';
+        companyName = data['company_name'];
+        technicianName = data['technician_name'];
+      });
+    }
   }
 
   Future<void> _fetchTechnician() async {
@@ -77,6 +104,8 @@ class _FireExtinguisherCorrectiveEmergencyState
       setState(() => technicianName = data?['name']);
     }
   }
+
+  Map<String, dynamic>? reportData;
 
   Future<void> _fetchCompany() async {
     final currentYear = DateTime.now().year;
@@ -114,10 +143,33 @@ class _FireExtinguisherCorrectiveEmergencyState
   }
 
   Future<void> _submitReport() async {
+    print('🚀 Starting _submitReport...');
+
+    // Convert technician signature
+    final techImage = await technicianSignature.toImage();
+    final techByteData = await techImage?.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    final techBytes = techByteData?.buffer.asUint8List();
+
+    // Convert company signature
+    final compImage = await companySignature.toImage();
+    final compByteData = await compImage?.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    final companyBytes = compByteData?.buffer.asUint8List();
+
+    print('🧪 techBytes: $techBytes');
+    print('🧪 companyBytes: $companyBytes');
+    print('📏 techBytes length: ${techBytes?.length}');
+    print('📏 companyBytes length: ${companyBytes?.length}');
+
+    // Validation
     if (!_formKey.currentState!.validate() ||
         currentDate == null ||
-        technicianSignature.isEmpty ||
-        companySignature.isEmpty) {
+        techBytes == null ||
+        companyBytes == null) {
+      print('❌ Validation failed');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
       );
@@ -125,18 +177,20 @@ class _FireExtinguisherCorrectiveEmergencyState
     }
 
     final user = supabase.auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      print('❌ No Supabase user');
+      return;
+    }
 
+    // Build steps list
     final stepsData =
-        steps
-            .map(
-              (s) => {
-                'step': s,
-                'checked': checks[s],
-                'note': notes[s]!.text.trim(),
-              },
-            )
-            .toList();
+        steps.map((s) {
+          return {
+            'step': s,
+            'checked': checks[s],
+            'note': notes[s]!.text.trim(),
+          };
+        }).toList();
 
     final writtenNotes =
         stepsData
@@ -152,6 +206,7 @@ class _FireExtinguisherCorrectiveEmergencyState
     }
 
     try {
+      // Save report
       await supabase.from('fire_extinguisher_correctiveemergency').insert({
         'task_id': widget.taskId,
         'task_type': widget.taskType,
@@ -165,8 +220,13 @@ class _FireExtinguisherCorrectiveEmergencyState
         'other_notes': otherNotesController.text.trim(),
         'technician_signed': true,
         'company_signed': true,
+        'technician_signature': base64Encode(techBytes),
+        'company_signature': base64Encode(companyBytes),
       });
 
+      print('✅ Report inserted');
+
+      // Update safety tool dates
       await supabase
           .from('safety_tools')
           .update({
@@ -175,21 +235,21 @@ class _FireExtinguisherCorrectiveEmergencyState
           })
           .eq('name', widget.toolName);
 
-      if (widget.taskType == 'علاجي') {
-        await supabase
-            .from('corrective_tasks')
-            .update({'status': 'done'})
-            .eq('id', widget.taskId);
-      } else if (widget.taskType == 'طارئ') {
-        await supabase
-            .from('emergency_tasks')
-            .update({'status': 'done'})
-            .eq('id', widget.taskId);
-      }
+      print('✅ Tool maintenance updated');
 
+      // Mark task as done
+      final taskTable =
+          widget.taskType == 'علاجي' ? 'corrective_tasks' : 'emergency_tasks';
+      await supabase
+          .from(taskTable)
+          .update({'status': 'done'})
+          .eq('id', widget.taskId);
+
+      print('✅ Task marked as done');
+
+      // Handle export request
       if (writtenNotes.isNotEmpty && context.mounted) {
         final reasonText = writtenNotes.map((m) => m['note']).join(' - ');
-
         final existing =
             await supabase
                 .from('export_requests')
@@ -201,17 +261,16 @@ class _FireExtinguisherCorrectiveEmergencyState
                 .maybeSingle();
 
         if (existing != null) {
-          final existingId = existing['id'];
           final List<dynamic> currentTools = existing['tool_codes'] ?? [];
           final updatedTools = [...currentTools, ...writtenNotes];
-
           await supabase
               .from('export_requests')
               .update({
                 'tool_codes': updatedTools,
                 'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
               })
-              .eq('id', existingId);
+              .eq('id', existing['id']);
+          print('🔁 Export request updated');
         } else {
           await supabase.from('export_requests').insert({
             'tool_codes': writtenNotes,
@@ -224,6 +283,7 @@ class _FireExtinguisherCorrectiveEmergencyState
             'is_submitted': false,
             'created_at': DateTime.now().toIso8601String(),
           });
+          print('🆕 New export request inserted');
         }
       }
 
@@ -426,14 +486,18 @@ class _FireExtinguisherCorrectiveEmergencyState
                         ),
                         const SizedBox(height: 12),
                         const Text('توقيع مندوب الشركة:'),
-                        AbsorbPointer(
-                          absorbing: widget.isReadonly,
-                          child: Signature(
-                            controller: companySignature,
-                            height: 100,
-                            backgroundColor: Colors.grey[200]!,
-                          ),
-                        ),
+                        widget.isReadonly &&
+                                reportData?['company_signature'] != null
+                            ? Image.memory(
+                              base64Decode(reportData!['company_signature']),
+                              height: 100,
+                              fit: BoxFit.contain,
+                            )
+                            : Signature(
+                              controller: companySignature,
+                              height: 100,
+                              backgroundColor: Colors.grey[200]!,
+                            ),
                       ],
                     ),
                   ),
@@ -449,16 +513,19 @@ class _FireExtinguisherCorrectiveEmergencyState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('اسم الفني: ${technicianName ?? '...'}'),
                         const Text('توقيع الفني:'),
-                        AbsorbPointer(
-                          absorbing: widget.isReadonly,
-                          child: Signature(
-                            controller: technicianSignature,
-                            height: 100,
-                            backgroundColor: Colors.grey[200]!,
-                          ),
-                        ),
+                        widget.isReadonly &&
+                                reportData?['technician_signature'] != null
+                            ? Image.memory(
+                              base64Decode(reportData!['technician_signature']),
+                              height: 100,
+                              fit: BoxFit.contain,
+                            )
+                            : Signature(
+                              controller: technicianSignature,
+                              height: 100,
+                              backgroundColor: Colors.grey[200]!,
+                            ),
                       ],
                     ),
                   ),

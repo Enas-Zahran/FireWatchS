@@ -32,6 +32,8 @@ class _FireExtinguisherHeadReviewPageState
   );
   DateTime? inspectionDate;
   DateTime? nextInspectionDate;
+  Map<String, dynamic>? reportData;
+
   List<String> steps = [
     'الطلاء لجسم الطفاية',
     'خلو الجسم من الصدأ',
@@ -66,33 +68,52 @@ class _FireExtinguisherHeadReviewPageState
   }
 
   Future<void> _loadData() async {
+    print('🟡 Loading report data...');
     final data =
         await supabase
             .from(table)
             .select()
             .eq('task_id', widget.taskId)
             .maybeSingle();
-    if (data == null) return;
 
-    inspectionDate = DateTime.tryParse(data['inspection_date'] ?? '');
-    nextInspectionDate = DateTime.tryParse(data['next_inspection_date'] ?? '');
-    companyName = data['company_name'];
-    companyRep.text = data['company_rep'] ?? '';
-    technicianName = data['technician_name'];
-    otherNotes.text = data['other_notes'] ?? '';
-    isApproved = data['head_approved'] == true;
-
-    if (data['steps'] != null) {
-      for (final step in data['steps']) {
-        final label = step['step'];
-        if (steps.contains(label)) {
-          checks[label] = step['checked'] ?? false;
-          notes[label]?.text = step['note'] ?? '';
-        }
-      }
+    if (data == null) {
+      print('🔴 No data found for taskId: ${widget.taskId}');
+      return;
     }
 
-    setState(() => loading = false);
+    print('✅ Report data loaded');
+    reportData = data;
+
+    try {
+      inspectionDate = DateTime.tryParse(data['inspection_date'] ?? '');
+      nextInspectionDate = DateTime.tryParse(
+        data['next_inspection_date'] ?? '',
+      );
+      companyName = data['company_name'];
+      companyRep.text = data['company_rep'] ?? '';
+      technicianName = data['technician_name'];
+      otherNotes.text = data['other_notes'] ?? '';
+      isApproved = data['head_approved'] == true;
+
+      if (data['steps'] != null) {
+        for (final step in data['steps']) {
+          final label = step['step'];
+          if (steps.contains(label)) {
+            checks[label] = step['checked'] ?? false;
+            notes[label]?.text = step['note'] ?? '';
+          }
+        }
+      }
+
+      print('✅ Data parsed successfully');
+    } catch (e) {
+      print('❌ Error parsing data: $e');
+    }
+
+    setState(() {
+      loading = false;
+    });
+    print('✅ UI updated with setState');
   }
 
   Future<void> _saveEdits() async {
@@ -139,6 +160,7 @@ class _FireExtinguisherHeadReviewPageState
       if ((originalValue ?? '').trim() != (newValue ?? '').trim()) {
         await supabase.from('head_edits').insert({
           'task_id': widget.taskId,
+          'task_type': widget.taskType,
           'field_name': fieldName,
           'technician_value': originalValue ?? '',
           'head_value': newValue ?? '',
@@ -212,6 +234,7 @@ class _FireExtinguisherHeadReviewPageState
 
   @override
   Widget build(BuildContext context) {
+    print('🧠 Widget building: loading=$loading');
     return Directionality(
       textDirection: ui.TextDirection.rtl,
       child: Scaffold(
@@ -306,6 +329,30 @@ class _FireExtinguisherHeadReviewPageState
                               ),
                               const SizedBox(height: 8),
                               Text('الفني: ${technicianName ?? '---'}'),
+                              const SizedBox(height: 12),
+                              const Text('توقيع الفني:'),
+                              if (reportData?['technician_signature'] != null)
+                                Image.memory(
+                                  base64Decode(
+                                    reportData!['technician_signature'],
+                                  ),
+                                  height: 100,
+                                  fit: BoxFit.contain,
+                                )
+                              else
+                                const Text('لا يوجد توقيع'),
+                              const SizedBox(height: 12),
+                              const Text('توقيع مندوب الشركة:'),
+                              if (reportData?['company_signature'] != null)
+                                Image.memory(
+                                  base64Decode(
+                                    reportData!['company_signature'],
+                                  ),
+                                  height: 100,
+                                  fit: BoxFit.contain,
+                                )
+                              else
+                                const Text('لا يوجد توقيع'),
                             ],
                           ),
                         ),
@@ -313,14 +360,21 @@ class _FireExtinguisherHeadReviewPageState
                       const SizedBox(height: 16),
                       const Text('توقيع رئيس الشعبة:'),
                       const SizedBox(height: 8),
-                      Container(
-                        height: 150,
-                        decoration: BoxDecoration(border: Border.all()),
-                        child: Signature(
-                          controller: headSignature,
-                          backgroundColor: Colors.white,
-                        ),
-                      ),
+                      isApproved && reportData?['head_signature'] != null
+                          ? Image.memory(
+                            base64Decode(reportData!['head_signature']),
+                            height: 150,
+                            fit: BoxFit.contain,
+                          )
+                          : Container(
+                            height: 150,
+                            decoration: BoxDecoration(border: Border.all()),
+                            child: Signature(
+                              controller: headSignature,
+                              backgroundColor: Colors.white,
+                            ),
+                          ),
+
                       const SizedBox(height: 16),
                       if (!isApproved)
                         Center(

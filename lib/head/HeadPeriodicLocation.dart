@@ -29,7 +29,7 @@ class _HeadPeriodicLocationsPageState extends State<HeadPeriodicLocationsPage> {
   Future<void> _loadData() async {
     try {
       print('🔄 Starting _loadData...');
-      setState(() => loading = true);
+      if (mounted) setState(() => loading = true);
 
       final user = supabase.auth.currentUser;
       if (user != null) {
@@ -38,6 +38,7 @@ class _HeadPeriodicLocationsPageState extends State<HeadPeriodicLocationsPage> {
                 .from('users')
                 .select('name')
                 .eq('id', user.id)
+                .limit(1)
                 .maybeSingle();
         headName = userInfo?['name'] ?? 'رئيس الشعبة';
         print('✅ Head name: $headName');
@@ -65,7 +66,6 @@ class _HeadPeriodicLocationsPageState extends State<HeadPeriodicLocationsPage> {
         );
         if (location.isEmpty) continue;
 
-        // ✅ Fetch head_approved based on tool type
         final toolType = (tool['type'] ?? '').toString().toLowerCase();
         bool isReviewed = false;
 
@@ -75,6 +75,7 @@ class _HeadPeriodicLocationsPageState extends State<HeadPeriodicLocationsPage> {
                   .from('fire_extinguisher_reports')
                   .select('head_approved')
                   .eq('task_id', t['id'])
+                  .limit(1)
                   .maybeSingle();
           isReviewed = report?['head_approved'] == true;
         } else if (toolType == 'fire hydrant') {
@@ -83,6 +84,7 @@ class _HeadPeriodicLocationsPageState extends State<HeadPeriodicLocationsPage> {
                   .from('fire_hydrant_reports')
                   .select('head_approved')
                   .eq('task_id', t['id'])
+                  .limit(1)
                   .maybeSingle();
           isReviewed = report?['head_approved'] == true;
         } else if (toolType == 'hose reel') {
@@ -91,6 +93,7 @@ class _HeadPeriodicLocationsPageState extends State<HeadPeriodicLocationsPage> {
                   .from('hose_reel_reports')
                   .select('head_approved')
                   .eq('task_id', t['id'])
+                  .limit(1)
                   .maybeSingle();
           isReviewed = report?['head_approved'] == true;
         }
@@ -102,21 +105,23 @@ class _HeadPeriodicLocationsPageState extends State<HeadPeriodicLocationsPage> {
           'tool_type': tool['type'],
           'location_code': location['code'],
           'status': t['status'],
-          'head_approved': isReviewed, // ✅ inject into task
+          'head_approved': isReviewed,
         });
       }
 
-      setState(() {
-        locations = List<Map<String, dynamic>>.from(locs);
-        periodicTasks = list;
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          locations = List<Map<String, dynamic>>.from(locs);
+          periodicTasks = list;
+          loading = false;
+        });
+      }
 
       print('✅ _loadData finished successfully');
     } catch (e, stack) {
       print('❌ Error in _loadData: $e');
       print('📌 Stack trace:\n$stack');
-      setState(() => loading = false);
+      if (mounted) setState(() => loading = false);
     }
   }
 

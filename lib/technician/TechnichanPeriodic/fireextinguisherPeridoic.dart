@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:signature/signature.dart';
 import 'package:intl/intl.dart';
-import 'dart:ui'as ui;
+import 'dart:convert';
+import 'dart:ui' as ui;
+
 class FireExtinguisherReportPage extends StatefulWidget {
   final String taskId;
   final String toolName;
@@ -39,6 +41,7 @@ class _FireExtinguisherReportPageState
   final TextEditingController companyRep = TextEditingController();
   final TextEditingController otherNotesController = TextEditingController();
   String? companyName;
+  Map<String, dynamic>? reportData;
 
   final List<String> steps = [
     'الطلاء لجسم الطفاية',
@@ -55,11 +58,40 @@ class _FireExtinguisherReportPageState
   @override
   void initState() {
     super.initState();
+
     for (var step in steps) {
       checks[step] = false;
       notes[step] = TextEditingController();
     }
+
     _fetchCompany();
+
+    if (widget.isReadonly) {
+      _loadReportData(); // <- 👈 load signature for readonly
+    }
+  }
+
+  Future<void> _loadReportData() async {
+    final data =
+        await supabase
+            .from('fire_extinguisher_reports')
+            .select()
+            .eq('task_id', widget.taskId)
+            .maybeSingle();
+
+    if (data != null) {
+      setState(() {
+        reportData = data;
+        if (data['inspection_date'] != null) {
+          currentDate = DateTime.parse(data['inspection_date']);
+        }
+        if (data['next_inspection_date'] != null) {
+          nextDate = DateTime.parse(data['next_inspection_date']);
+        }
+        otherNotesController.text = data['other_notes'] ?? '';
+        companyRep.text = data['company_rep'] ?? '';
+      });
+    }
   }
 
   @override
@@ -110,31 +142,65 @@ class _FireExtinguisherReportPageState
   }
 
   Future<void> _submitReport() async {
-    if (!_formKey.currentState!.validate() ||
-        currentDate == null ||
-        technicianSignature.isEmpty ||
-        companySignature.isEmpty) {
+    print('🚀 Starting _submitReport...');
+
+    // ✅ Convert technician signature to Uint8List
+    final techImage = await technicianSignature.toImage();
+    final techByteData = await techImage?.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    final techBytes = techByteData?.buffer.asUint8List();
+
+    // ✅ Convert company signature to Uint8List
+    final compImage = await companySignature.toImage();
+    final compByteData = await compImage?.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    final companyBytes = compByteData?.buffer.asUint8List();
+
+    print('🧪 techBytes: $techBytes');
+    print('🧪 companyBytes: $companyBytes');
+    print('📏 techBytes length: ${techBytes?.length}');
+    print('📏 companyBytes length: ${companyBytes?.length}');
+
+    if (techBytes == null || companyBytes == null) {
+      print('❌ One or both signatures are null!');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
+        const SnackBar(content: Text('يرجى توقيع الفني ومندوب الشركة')),
+      );
+      return;
+    }
+
+    final signatureBase64 = base64Encode(techBytes);
+    final companyBase64 = base64Encode(companyBytes);
+
+    if (!_formKey.currentState!.validate() || currentDate == null) {
+      print('❌ Form is invalid or date is null');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى تعبئة الحقول المطلوبة واختيار تاريخ الفحص'),
+        ),
       );
       return;
     }
 
     final user = supabase.auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      print('❌ No Supabase user found');
+      return;
+    }
 
     final stepsData =
-        steps
-            .map(
-              (s) => {
-                'step': s,
-                'checked': checks[s],
-                'note': notes[s]!.text.trim(),
-              },
-            )
-            .toList();
+        steps.map((s) {
+          return {
+            'step': s,
+            'checked': checks[s],
+            'note': notes[s]!.text.trim(),
+          };
+        }).toList();
 
     try {
+      print('🟢 Inserting report to fire_extinguisher_reports...');
       await supabase.from('fire_extinguisher_reports').insert({
         'task_id': widget.taskId,
         'tool_name': widget.toolName,
@@ -144,15 +210,20 @@ class _FireExtinguisherReportPageState
         'company_rep': companyRep.text.trim(),
         'technician_name': widget.technicianName,
         'steps': stepsData,
+        'other_notes': otherNotesController.text.trim(),
+        'technician_signature': signatureBase64,
+        'company_signature': companyBase64,
         'technician_signed': true,
         'company_signed': true,
-        'other_notes': otherNotesController.text.trim(),
       });
+
+      print('✅ Report inserted');
 
       await supabase
           .from('periodic_tasks')
           .update({'status': 'done'})
           .eq('id', widget.taskId);
+      print('✅ Task marked as done');
 
       await supabase
           .from('safety_tools')
@@ -161,6 +232,7 @@ class _FireExtinguisherReportPageState
             'next_maintenance_date': nextDate!.toIso8601String(),
           })
           .eq('name', widget.toolName);
+      print('✅ Tool maintenance dates updated');
 
       final exportMaterials =
           stepsData
@@ -202,6 +274,7 @@ class _FireExtinguisherReportPageState
                 'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
               })
               .eq('id', existingId);
+          print('🔁 Export request updated');
         } else {
           await supabase.from('export_requests').insert({
             'tool_codes': exportMaterials,
@@ -214,6 +287,7 @@ class _FireExtinguisherReportPageState
             'is_submitted': false,
             'created_at': DateTime.now().toIso8601String(),
           });
+          print('🆕 New export request inserted');
         }
       }
 
@@ -329,7 +403,9 @@ class _FireExtinguisherReportPageState
                                     : (v) => setState(() => checks[step] = v!),
                           ),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(step, textAlign: TextAlign.right)),
+                          Expanded(
+                            child: Text(step, textAlign: TextAlign.right),
+                          ),
                           const SizedBox(width: 8),
                           IconButton(
                             icon: const Icon(Icons.edit_note),
@@ -349,7 +425,8 @@ class _FireExtinguisherReportPageState
                                             actions: [
                                               TextButton(
                                                 onPressed:
-                                                    () => Navigator.pop(context),
+                                                    () =>
+                                                        Navigator.pop(context),
                                                 child: const Text('تم'),
                                               ),
                                             ],
@@ -398,15 +475,24 @@ class _FireExtinguisherReportPageState
                           validator: (v) => v!.isEmpty ? 'مطلوب' : null,
                         ),
                         const SizedBox(height: 12),
-                        const Text('توقيع مندوب الشركة:'),
-                        AbsorbPointer(
-                          absorbing: widget.isReadonly,
-                          child: Signature(
-                            controller: companySignature,
-                            height: 100,
-                            backgroundColor: Colors.grey[200]!,
-                          ),
-                        ),
+                        widget.isReadonly
+                            ? (reportData?['company_signature'] != null
+                                ? Image.memory(
+                                  base64Decode(
+                                    reportData!['company_signature'],
+                                  ),
+                                  height: 100,
+                                  fit: BoxFit.contain,
+                                )
+                                : const SizedBox(
+                                  height: 100,
+                                  child: Center(child: Text('لا يوجد توقيع')),
+                                ))
+                            : Signature(
+                              controller: companySignature,
+                              height: 100,
+                              backgroundColor: Colors.grey[200]!,
+                            ),
                       ],
                     ),
                   ),
@@ -424,13 +510,11 @@ class _FireExtinguisherReportPageState
                       children: [
                         Text('اسم الفني: ${widget.technicianName}'),
                         const Text('توقيع الفني:'),
-                        AbsorbPointer(
-                          absorbing: widget.isReadonly,
-                          child: Signature(
-                            controller: technicianSignature,
-                            height: 100,
-                            backgroundColor: Colors.grey[200]!,
-                          ),
+
+                        Signature(
+                          controller: technicianSignature,
+                          height: 100,
+                          backgroundColor: Colors.grey[200]!,
                         ),
                       ],
                     ),

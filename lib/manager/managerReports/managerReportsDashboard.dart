@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:FireWatch/manager/managerReports/managerReportsDashboard.dart';
-class ReportsDashboardPage extends StatelessWidget {
-  static const routeName = 'reportsDashboard';
+import 'package:FireWatch/manager/managerReports/managerPeriodicReport.dart';
+import 'package:FireWatch/manager/managerReports/managerCorrectiveReport.dart';
+import 'package:FireWatch/manager/managerReports/managerEmergencyReport.dart';
+class ManagerReportsDashboardPage extends StatelessWidget {
+  static const String routeName = 'managerReportsDashboardPage';
 
-  const ReportsDashboardPage({super.key});
+  const ManagerReportsDashboardPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +15,7 @@ class ReportsDashboardPage extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: const Color(0xff00408b),
           title: const Center(
-            child: Text('لوحة التقارير', style: TextStyle(color: Colors.white)),
+            child: Text('لوحة تقارير المهام', style: TextStyle(color: Colors.white)),
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -21,25 +23,27 @@ class ReportsDashboardPage extends StatelessWidget {
           ),
         ),
         body: ListView(
-          padding: const EdgeInsets.fromLTRB(30, 120, 30, 30),
+          padding: const EdgeInsets.fromLTRB(30, 50, 30, 30),
           children: [
             _buildTile(
               context,
-              title: 'الأعمال',
-              icon: Icons.assignment_turned_in,
-              onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => ManagerReportsDashboardPage()));
-              },
+              title: 'التقارير الدورية',
+              icon: Icons.access_time,
+              destinationPage: const ManagerPeriodicReports(),
             ),
             const SizedBox(height: 12),
             _buildTile(
               context,
-              title: 'المالية',
-              icon: Icons.attach_money,
-              onTap: () {
-                // TODO: Navigate to المالية reports page
-                // Navigator.push(context, MaterialPageRoute(builder: (_) => YourFinancialReportsPage()));
-              },
+              title: 'التقارير العلاجية',
+              icon: Icons.healing,
+              destinationPage: const ManagerCorrectiveReports(),
+            ),
+            const SizedBox(height: 12),
+            _buildTile(
+              context,
+              title: 'التقارير الطارئة',
+              icon: Icons.report,
+              destinationPage: const ManagerEmergencyReports(),
             ),
           ],
         ),
@@ -51,14 +55,19 @@ class ReportsDashboardPage extends StatelessWidget {
     BuildContext context, {
     required String title,
     required IconData icon,
-    required VoidCallback onTap,
+    required Widget destinationPage,
   }) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 4,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => destinationPage),
+          );
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
