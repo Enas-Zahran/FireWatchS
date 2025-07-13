@@ -59,7 +59,7 @@ class _AddEmergencyPageState extends State<AddEmergencyPage> {
                     ElevatedButton(
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
-                          // TODO: Add your submission logic
+                        
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('تمت الإضافة بنجاح')),
                           );

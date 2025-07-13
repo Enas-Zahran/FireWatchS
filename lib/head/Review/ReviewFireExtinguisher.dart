@@ -214,6 +214,12 @@ class _FireExtinguisherHeadReviewPageState
     }
 
     await supabase.from(table).update(updates).eq('task_id', widget.taskId);
+    if (widget.taskType == 'دوري') {
+      await supabase
+          .from('periodic_tasks')
+          .update({'completed': true})
+          .eq('id', widget.taskId);
+    }
 
     ScaffoldMessenger.of(
       context,

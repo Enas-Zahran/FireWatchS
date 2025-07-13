@@ -94,9 +94,16 @@ class _PeriodicTasksPageState extends State<PeriodicTasksPage> {
               .substring(0, 10),
         );
 
+    // assignments = await supabase
+    //     .from('periodic_tasks')
+    //     .select('tool_id, assigned_to');
+    final now = DateTime.now().toUtc();
+    final cutoff = now.subtract(const Duration(hours: 24)).toIso8601String();
+
     assignments = await supabase
         .from('periodic_tasks')
-        .select('tool_id, assigned_to');
+        .select('tool_id, assigned_to, assigned_at')
+        .gte('assigned_at', cutoff);
 
     setState(() {
       tools =
@@ -370,10 +377,7 @@ class _PeriodicTasksPageState extends State<PeriodicTasksPage> {
                         'tool_id': toolId,
                         'assigned_to': selectedTechnicianId,
                         'assigned_by': supabase.auth.currentUser!.id,
-                        'due_date':
-                            DateTime.now()
-                                .add(const Duration(days: 6))
-                                .toIso8601String(),
+                        'assigned_at': DateTime.now().toUtc().toIso8601String(),
                       });
                     }
 
