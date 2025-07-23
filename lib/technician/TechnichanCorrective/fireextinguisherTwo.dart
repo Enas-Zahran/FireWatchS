@@ -270,7 +270,7 @@ class _FireExtinguisherCorrectiveEmergencyState
                 'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
               })
               .eq('id', existing['id']);
-          print('🔁 Export request updated');
+          
         } else {
           await supabase.from('export_requests').insert({
             'tool_codes': writtenNotes,

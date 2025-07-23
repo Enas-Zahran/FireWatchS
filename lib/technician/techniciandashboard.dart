@@ -52,6 +52,30 @@ class TechnicianDashboardPage extends StatelessWidget {
     );
   }
 
+  Future<int> getNotificationCount(String technicianId) async {
+    final supabase = Supabase.instance.client;
+
+    final periodic = await supabase
+        .from('periodic_tasks')
+        .select()
+        .eq('assigned_to', technicianId)
+        .neq('status', 'done');
+
+    final corrective = await supabase
+        .from('corrective_tasks')
+        .select()
+        .eq('assigned_to', technicianId)
+        .neq('status', 'done');
+
+    final emergency = await supabase
+        .from('emergency_tasks')
+        .select()
+        .eq('assigned_to', technicianId)
+        .neq('status', 'done');
+
+    return periodic.length + corrective.length + emergency.length;
+  }
+
   void _navigateToApprovedRequests(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
 
@@ -92,18 +116,53 @@ class TechnicianDashboardPage extends StatelessWidget {
               tooltip: 'اضافة تقرير',
               onPressed: () => _showAddOptions(context),
             ),
-            IconButton(
-              icon: const Icon(Icons.notifications, color: Colors.white),
-              tooltip: 'الاشعارات',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const TechnicianNotificationsPage(),
+            StatefulBuilder(
+              builder: (context, setState) {
+                return FutureBuilder<int>(
+                  future: getNotificationCount(
+                    Supabase.instance.client.auth.currentUser!.id,
                   ),
+                  builder: (context, snapshot) {
+                    final count = snapshot.data ?? 0;
+
+                    return Stack(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.notifications,
+                            color: Colors.white,
+                          ),
+                          tooltip: 'الإشعارات',
+                          onPressed: () async {
+                            // Navigate and wait for return
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) =>
+                                        const TechnicianNotificationsPage(),
+                              ),
+                            );
+                            // 🔁 Refresh when returned
+                            setState(() {});
+                          },
+                        ),
+                        if (count > 0)
+                          const Positioned(
+                            top: 12,
+                            right: 12,
+                            child: CircleAvatar(
+                              radius: 5,
+                              backgroundColor: Colors.red,
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 );
               },
             ),
+
             IconButton(
               icon: const Icon(Icons.file_upload, color: Colors.white),
               tooltip: 'تصريح إخراج المواد',

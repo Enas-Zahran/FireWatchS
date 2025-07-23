@@ -75,7 +75,7 @@ class _CorrectiveTasksPageState extends State<CorrectiveTasksPage> {
   Future<void> _fetchTechnicians() async {
     final response = await supabase
         .from('users')
-        .select('id, name, is_approved') 
+        .select('id, name, is_approved')
         .eq('role', 'فني السلامة العامة')
         .eq('is_approved', true);
 
@@ -93,35 +93,71 @@ class _CorrectiveTasksPageState extends State<CorrectiveTasksPage> {
   }
 
   Future<void> _fetchReports() async {
+    print('📥 Fetching emergency_requests...');
     final response = await supabase
         .from('emergency_requests')
         .select()
         .eq('is_approved', true)
         .eq('task_type', 'علاجي');
 
+    print('📥 Fetching corrective_tasks...');
     assignments = await supabase
         .from('corrective_tasks')
-        .select('report_id, assigned_to');
+        .select('report_id, assigned_to, assigned_at');
+
+    final cutoff = DateTime.now().toUtc().subtract(const Duration(hours: 24));
+    print('⏰ Cutoff time: $cutoff');
 
     setState(() {
       reports =
-          List<Map<String, dynamic>>.from(response).map((report) {
-            final assignment = assignments.firstWhere(
-              (a) => a['report_id'] == report['id'],
-              orElse: () => {},
-            );
-            final isAssigned = assignment.isNotEmpty;
-            final assignedTo = assignment['assigned_to'];
-            return {
-              'id': report['id'],
-              'tool': report['tool_code'],
-              'reason': report['usage_reason'],
-              'action': report['action_taken'],
-              'assigned': isAssigned,
-              'assignedTo': assignedTo,
-              'locationName': _getLocationNameFromToolName(report['tool_code']),
-            };
-          }).toList();
+          List<Map<String, dynamic>>.from(response)
+              .map((report) {
+                final reportId = report['id'];
+                final assignment = assignments.firstWhere(
+                  (a) => a['report_id'] == reportId,
+                  orElse: () => {},
+                );
+
+                final isAssigned = assignment.isNotEmpty;
+                final assignedTo = assignment['assigned_to'];
+                final assignedAtRaw = assignment['assigned_at'];
+
+                print('\n📄 Report: $reportId');
+                print('🔗 Assigned: $isAssigned');
+                print('👷 assignedTo: $assignedTo');
+                print('🕓 assignedAtRaw: $assignedAtRaw');
+
+                if (isAssigned && assignedAtRaw != null) {
+                  try {
+                    final assignedAt = DateTime.parse(assignedAtRaw);
+                    print('⏱ assignedAt parsed: $assignedAt');
+
+                    if (assignedAt.isBefore(cutoff)) {
+                      print(
+                        '❌ SKIPPING report $reportId: assigned over 24h ago',
+                      );
+                      return null; // ✅ إخفاء المهمة إذا مضى أكثر من 24 ساعة
+                    }
+                  } catch (e) {
+                    print('⚠️ Failed to parse assigned_at: $e');
+                  }
+                }
+
+                print('✅ KEEPING report $reportId');
+                return {
+                  'id': reportId,
+                  'tool': report['tool_code'],
+                  'reason': report['usage_reason'],
+                  'action': report['action_taken'],
+                  'assigned': isAssigned,
+                  'assignedTo': assignedTo,
+                  'locationName': _getLocationNameFromToolName(
+                    report['tool_code'],
+                  ),
+                };
+              })
+              .whereType<Map<String, dynamic>>()
+              .toList();
     });
   }
 
@@ -165,6 +201,7 @@ class _CorrectiveTasksPageState extends State<CorrectiveTasksPage> {
               'report_id': reportId,
               'assigned_to': selectedTechnicianId,
               'assigned_by': supabase.auth.currentUser!.id,
+              'assigned_at': DateTime.now().toUtc().toIso8601String(),
               'due_date':
                   DateTime.now().add(const Duration(days: 6)).toIso8601String(),
               'tool_id': toolMap[report['tool']],

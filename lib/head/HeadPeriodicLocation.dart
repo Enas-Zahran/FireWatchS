@@ -50,8 +50,9 @@ class _HeadPeriodicLocationsPageState extends State<HeadPeriodicLocationsPage> {
       final tasks = await supabase
           .from('periodic_tasks')
           .select(
-            'id, tool_id, status, safety_tools(id, name, type, location_id)',
+            'id, tool_id, status, safety_tools!periodic_tasks_tool_id_fkey(id, name, type, location_id)',
           );
+
       print('✅ Fetched ${tasks.length} periodic tasks');
 
       List<Map<String, dynamic>> list = [];

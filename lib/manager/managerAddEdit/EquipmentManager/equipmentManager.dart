@@ -224,19 +224,6 @@ class _AllToolsPageState extends State<AllToolsPage> {
                                                   Text(
                                                     '${tool['type']} - ${tool['capacity']}',
                                                   ),
-                                                  if (tool['status'] != null)
-                                                    Text(
-                                                      'الحالة: ${tool['status']}',
-                                                      style: TextStyle(
-                                                        color:
-                                                            tool['status'] ==
-                                                                    'صالحة'
-                                                                ? Colors.green
-                                                                : Colors.red,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
                                                 ],
                                               ),
                                               trailing: Column(

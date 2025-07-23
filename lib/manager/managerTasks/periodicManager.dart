@@ -26,6 +26,8 @@ class _PeriodicTasksPageState extends State<PeriodicTasksPage> {
 
   @override
   void initState() {
+    print('✅ PeriodicTasksPage initState called!');
+
     super.initState();
     _fetchLocations().then((_) async {
       await _fetchTaskCounts();
@@ -82,50 +84,92 @@ class _PeriodicTasksPageState extends State<PeriodicTasksPage> {
   }
 
   Future<void> _fetchTools() async {
-    final response = await supabase
-        .from('safety_tools')
-        .select('id, name, next_maintenance_date, type, material_type')
-        .lte(
-          'next_maintenance_date',
+    print('🛠️ _fetchTools called');
+
+    try {
+      final cutoffDate =
           DateTime.now()
               .add(const Duration(days: 6))
               .copyWith(hour: 23, minute: 59, second: 59)
-              .toIso8601String()
-              .substring(0, 10),
-        );
+              .toIso8601String();
 
-    // assignments = await supabase
-    //     .from('periodic_tasks')
-    //     .select('tool_id, assigned_to');
-    final now = DateTime.now().toUtc();
-    final cutoff = now.subtract(const Duration(hours: 24)).toIso8601String();
+      print('📅 Cutoff Date for next_maintenance_date filter: $cutoffDate');
 
-    assignments = await supabase
-        .from('periodic_tasks')
-        .select('tool_id, assigned_to, assigned_at')
-        .gte('assigned_at', cutoff);
+      final response = await supabase
+          .from('safety_tools')
+          .select('id, name, next_maintenance_date, type, material_type')
+          .lte('next_maintenance_date', cutoffDate);
 
-    setState(() {
-      tools =
-          List<Map<String, dynamic>>.from(response).map((tool) {
-            final assignment = assignments.firstWhere(
-              (a) => a['tool_id'] == tool['id'],
-              orElse: () => {},
-            );
-            final isAssigned = assignment.isNotEmpty;
-            final assignedTo = assignment['assigned_to'];
-            return {
-              'id': tool['id'],
-              'name': tool['name'],
-              'nextMaintenance': tool['next_maintenance_date'],
-              'assigned': isAssigned,
-              'assignedTo': assignedTo,
-              'locationName': _getLocationNameFromToolName(tool['name']),
-              'type': tool['type'],
-              'material_type': tool['material_type'],
-            };
-          }).toList();
-    });
+      print('🔍 tools response: $response');
+
+      final assignmentResponse = await supabase
+          .from('periodic_tasks')
+          .select('tool_id, assigned_to, assigned_at');
+
+      print('🗂️ assignmentResponse: $assignmentResponse');
+
+      final now = DateTime.now().toUtc();
+      final cutoff = now.subtract(const Duration(hours: 24));
+      print('⏱️ Assignment cutoff time: $cutoff');
+
+      assignments = List<Map<String, dynamic>>.from(assignmentResponse);
+
+      setState(() {
+        tools =
+            List<Map<String, dynamic>>.from(response)
+                .where((tool) {
+                  final assignment = assignments.firstWhere(
+                    (a) => a['tool_id'] == tool['id'],
+                    orElse: () => {},
+                  );
+
+                  final isAssigned = assignment.isNotEmpty;
+                  final assignedAtRaw = assignment['assigned_at'];
+
+                  if (isAssigned && assignedAtRaw != null) {
+                    try {
+                      final assignedAt = DateTime.parse(assignedAtRaw);
+                      if (assignedAt.isBefore(cutoff)) {
+                        print(
+                          '❌ Skipping tool ${tool['name']} - assigned over 24h ago',
+                        );
+                        return false;
+                      }
+                    } catch (e) {
+                      print(
+                        '⚠️ Failed to parse assignedAt for ${tool['name']}: $e',
+                      );
+                    }
+                  }
+
+                  return true;
+                })
+                .map((tool) {
+                  final assignment = assignments.firstWhere(
+                    (a) => a['tool_id'] == tool['id'],
+                    orElse: () => {},
+                  );
+                  final isAssigned = assignment.isNotEmpty;
+                  final assignedTo = assignment['assigned_to'];
+
+                  return {
+                    'id': tool['id'],
+                    'name': tool['name'],
+                    'nextMaintenance': tool['next_maintenance_date'],
+                    'assigned': isAssigned,
+                    'assignedTo': assignedTo,
+                    'locationName': _getLocationNameFromToolName(tool['name']),
+                    'type': tool['type'],
+                    'material_type': tool['material_type'],
+                  };
+                })
+                .toList();
+      });
+
+      print('✅ Final filtered tools: $tools');
+    } catch (e) {
+      print('❌ Error in _fetchTools: $e');
+    }
   }
 
   String _getLocationNameFromToolName(String? toolName) {
@@ -373,12 +417,23 @@ class _PeriodicTasksPageState extends State<PeriodicTasksPage> {
                     }
 
                     for (final toolId in selectedToolIds) {
-                      await supabase.from('periodic_tasks').insert({
-                        'tool_id': toolId,
-                        'assigned_to': selectedTechnicianId,
-                        'assigned_by': supabase.auth.currentUser!.id,
-                        'assigned_at': DateTime.now().toUtc().toIso8601String(),
-                      });
+                      try {
+                        await supabase.from('periodic_tasks').insert({
+                          'tool_id': toolId,
+                          'assigned_to': selectedTechnicianId,
+                          'assigned_by': supabase.auth.currentUser!.id,
+                          'assigned_at':
+                              DateTime.now().toUtc().toIso8601String(),
+                          'due_date':
+                              toolDetails.firstWhere(
+                                (t) => t['id'] == toolId,
+                              )['nextMaintenance'],
+                        });
+
+                        print('✅ Insert succeeded for tool: $toolId');
+                      } catch (e) {
+                        print('❌ Insert failed for tool: $toolId - Error: $e');
+                      }
                     }
 
                     final userData =
@@ -388,7 +443,6 @@ class _PeriodicTasksPageState extends State<PeriodicTasksPage> {
                             .eq('id', selectedTechnicianId!)
                             .single();
 
-                    // ✅ Safe merging function
                     List<String> updateList(
                       dynamic current,
                       Set<String> newValues,
@@ -427,18 +481,20 @@ class _PeriodicTasksPageState extends State<PeriodicTasksPage> {
                     );
                     final updatedTaskCount =
                         (userData['task_count'] ?? 0) + selectedToolIds.length;
+
                     await supabase
                         .from('users')
                         .update({
-                          'tool_type': toolTypes.toList(), // ✅ This is good now
-                          'material_type':
-                              materialTypes.toList(), // ✅ Also good
+                          'tool_type': updatedToolTypes,
+                          'material_type': updatedMaterialTypes,
                           'work_place': updatedWorkPlaces,
+                          'task_count': updatedTaskCount,
                         })
                         .eq('id', selectedTechnicianId!);
 
                     Navigator.pop(context);
                     setState(() => selectedToolIds.clear());
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('تم إسناد المهام وتحديث الفني بنجاح'),
@@ -446,8 +502,8 @@ class _PeriodicTasksPageState extends State<PeriodicTasksPage> {
                     );
 
                     await _fetchTaskCounts();
-                    _fetchTechnicians();
-                    _fetchTools();
+                    await _fetchTechnicians();
+                    await _fetchTools();
                   },
                   child: const Text('نعم'),
                 ),

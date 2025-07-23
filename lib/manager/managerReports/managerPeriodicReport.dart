@@ -33,68 +33,96 @@ class _ManagerPeriodicReportsState extends State<ManagerPeriodicReports> {
 
   final toolTypes = ['fire extinguisher', 'hose reel', 'fire hydrant'];
 
-
   List<String> locationNames = [];
 
   bool loading = true;
 
+
   @override
   void initState() {
+    print('👀 initState triggered');
     super.initState();
     _loadReports();
   }
 
   Future<void> _loadReports() async {
-    final extinguisherReports = await supabase
-        .from('fire_extinguisher_reports')
-        .select()
-        .eq('head_approved', true);
-    final hydrantReports = await supabase
-        .from('fire_hydrant_reports')
-        .select()
-        .eq('task_type', 'دوري')
-        .eq('head_approved', true);
-    final hoseReelReports = await supabase
-        .from('hose_reel_reports')
-        .select()
-        .eq('task_type', 'دوري')
-        .eq('head_approved', true);
+    try {
+      print('🚀 Starting _loadReports');
 
-    final tools = await supabase
-        .from('safety_tools')
-        .select('name, location_id, material_type, capacity');
-    final locations = await supabase.from('locations').select('id, name');
+      final extinguisherReports = await supabase
+          .from('fire_extinguisher_reports')
+          .select()
+          .eq('head_approved', true);
 
-    final locationMap = {for (var loc in locations) loc['id']: loc['name']};
-    for (var tool in tools) {
-      final name = tool['name'];
-      final locationId = tool['location_id'];
-      final material = tool['material_type'];
+      print('✅ extinguisherReports: ${extinguisherReports.length}');
 
-      if (name != null && locationId != null) {
-        toolLocations[name] = locationMap[locationId] ?? 'غير معروف';
+      final hydrantReports = await supabase
+          .from('fire_hydrant_reports')
+          .select()
+          .eq('task_type', 'دوري')
+          .eq('head_approved', true);
+
+      print('✅ hydrantReports: ${hydrantReports.length}');
+
+      final hoseReelReports = await supabase
+          .from('hose_reel_reports')
+          .select()
+          .eq('task_type', 'دوري')
+          .eq('head_approved', true);
+
+      print('✅ hoseReelReports: ${hoseReelReports.length}');
+
+      final tools = await supabase
+          .from('safety_tools')
+          .select('name, location_id, material_type, capacity');
+
+      print('✅ tools: ${tools.length}');
+
+      final locations = await supabase.from('locations').select('id, name');
+
+      print('✅ locations: ${locations.length}');
+
+      final locationMap = {for (var loc in locations) loc['id']: loc['name']};
+
+      for (var tool in tools) {
+        final name = tool['name'];
+        final locationId = tool['location_id'];
+        final material = tool['material_type'];
+
+        if (name != null && locationId != null) {
+          toolLocations[name] = locationMap[locationId] ?? 'غير معروف';
+        }
+        if (name != null && material != null) {
+          toolMaterialTypes[name] = material;
+        }
       }
-      if (name != null && material != null) {
-        toolMaterialTypes[name] = material;
-      }
+
+      final combined = [
+        ...extinguisherReports.map(
+          (e) => {...e, 'tool_type': 'fire extinguisher'},
+        ),
+        ...hydrantReports.map((e) => {...e, 'tool_type': 'fire hydrant'}),
+        ...hoseReelReports.map((e) => {...e, 'tool_type': 'hose reel'}),
+      ];
+
+      locationNames =
+          toolLocations.values
+              .toSet()
+              .where((e) => e.trim().isNotEmpty)
+              .toList();
+
+      setState(() {
+        allReports = combined.cast<Map<String, dynamic>>();
+        filteredReports = List.from(allReports);
+        loading = false;
+      });
+
+      print('✅ _loadReports completed successfully');
+    } catch (e, stack) {
+      print('❌ ERROR in _loadReports: $e');
+      print('📌 STACK: $stack');
+      setState(() => loading = false);
     }
-
-    final combined = [
-      ...extinguisherReports.map(
-        (e) => {...e, 'tool_type': 'fire extinguisher'},
-      ),
-      ...hydrantReports.map((e) => {...e, 'tool_type': 'fire hydrant'}),
-      ...hoseReelReports.map((e) => {...e, 'tool_type': 'hose reel'}),
-    ];
-
-    locationNames =
-        toolLocations.values.toSet().where((e) => e.trim().isNotEmpty).toList();
-
-    setState(() {
-      allReports = combined.cast<Map<String, dynamic>>();
-      filteredReports = List.from(allReports);
-      loading = false;
-    });
   }
 
   void _applyFilters() {
@@ -142,8 +170,6 @@ class _ManagerPeriodicReportsState extends State<ManagerPeriodicReports> {
                 !selectedCompanyReps.contains(companyRep))
               return false;
 
-          
-
             return true;
           }).toList();
     });
@@ -176,9 +202,11 @@ class _ManagerPeriodicReportsState extends State<ManagerPeriodicReports> {
       textDirection: ui.TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'تقارير الفحص الدوري المعتمدة',
-            style: TextStyle(color: Colors.white),
+          title: Center(
+            child: const Text(
+              'تقارير الفحص الدوري المعتمدة',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
           backgroundColor: const Color(0xff00408b),
           iconTheme: const IconThemeData(color: Colors.white),
@@ -213,7 +241,7 @@ class _ManagerPeriodicReportsState extends State<ManagerPeriodicReports> {
                                 : selectedToolTypes.remove(v),
                       ),
                 ),
-              
+
                 _buildCheckboxFilter(
                   label: 'مكان العمل',
                   options: locationNames,

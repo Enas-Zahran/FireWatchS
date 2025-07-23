@@ -55,6 +55,8 @@ class _FireHydrantHeadReviewPageState extends State<FireHydrantHeadReviewPage> {
   bool loading = true;
   String? technicianSignatureBase64;
   String? companySignatureBase64;
+  String? toolId;
+  DateTime? nextInspectionDate;
 
   @override
   void initState() {
@@ -64,6 +66,22 @@ class _FireHydrantHeadReviewPageState extends State<FireHydrantHeadReviewPage> {
       notes[step] = TextEditingController();
     }
     _loadData();
+    _fetchToolId();
+  }
+
+  Future<void> _fetchToolId() async {
+    final task =
+        await supabase
+            .from('corrective_tasks')
+            .select('tool_id')
+            .eq('id', widget.taskId)
+            .maybeSingle();
+
+    if (task != null && mounted) {
+      setState(() {
+        toolId = task['tool_id'];
+      });
+    }
   }
 
   Future<void> _loadData() async {
@@ -222,6 +240,25 @@ class _FireHydrantHeadReviewPageState extends State<FireHydrantHeadReviewPage> {
           .from('fire_hydrant_reports')
           .update(updates)
           .eq('task_id', widget.taskId);
+      // ✅ تحديث تواريخ الصيانة في جدول safety_tools
+      if (toolId != null) {
+        final newMaintenanceDate = DateTime.now().add(
+          const Duration(days: 365),
+        );
+        print('🔧 Updating maintenance dates for tool = $toolId');
+
+        await supabase
+            .from('safety_tools')
+            .update({
+              'last_maintenance_date': DateTime.now().toIso8601String(),
+              'next_maintenance_date': newMaintenanceDate.toIso8601String(),
+            })
+            .eq('name', toolId!); // ❗ غيّري إلى 'id' إذا كان toolId هو UUID
+
+        setState(() {
+          nextInspectionDate = newMaintenanceDate;
+        });
+      }
 
       if (mounted) {
         setState(() => isApproved = true);
@@ -353,7 +390,7 @@ class _FireHydrantHeadReviewPageState extends State<FireHydrantHeadReviewPage> {
                                   ),
                                   height: 100,
                                   fit: BoxFit.contain,
-                                )    
+                                )
                               else
                                 const Text('لا يوجد توقيع'),
                               const SizedBox(height: 12),

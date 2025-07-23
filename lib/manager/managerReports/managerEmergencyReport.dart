@@ -205,9 +205,11 @@ class _ManagerEmergencyReportsState extends State<ManagerEmergencyReports> {
       textDirection: ui.TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'تقارير الفحص الطارئ المعتمد',
-            style: TextStyle(color: Colors.white),
+          title: Center(
+            child: const Text(
+              'تقارير الفحص الطارئ المعتمد',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
           backgroundColor: const Color(0xff00408b),
           iconTheme: const IconThemeData(color: Colors.white),

@@ -52,6 +52,8 @@ class _HoseReelHeadReviewPageState extends State<HoseReelHeadReviewPage> {
   Map<String, dynamic>? reportData;
   String? technicianSignatureBase64;
   String? companySignatureBase64;
+  DateTime? nextInspectionDate;
+  String? toolId;
 
   @override
   void initState() {
@@ -61,6 +63,22 @@ class _HoseReelHeadReviewPageState extends State<HoseReelHeadReviewPage> {
       notes[s] = TextEditingController();
     }
     _loadData();
+    _fetchToolId();
+  }
+
+  Future<void> _fetchToolId() async {
+    final task =
+        await supabase
+            .from('corrective_tasks')
+            .select('tool_id')
+            .eq('id', widget.taskId)
+            .maybeSingle();
+
+    if (task != null && mounted) {
+      setState(() {
+        toolId = task['tool_id'];
+      });
+    }
   }
 
   Future<void> _loadData() async {
@@ -204,6 +222,22 @@ class _HoseReelHeadReviewPageState extends State<HoseReelHeadReviewPage> {
         .from('hose_reel_reports')
         .update(updates)
         .eq('task_id', widget.taskId);
+    if (toolId != null) {
+      final newMaintenanceDate = DateTime.now().add(const Duration(days: 365));
+      print('🔧 Updating maintenance dates for tool = $toolId');
+
+      await supabase
+          .from('safety_tools')
+          .update({
+            'last_maintenance_date': DateTime.now().toIso8601String(),
+            'next_maintenance_date': newMaintenanceDate.toIso8601String(),
+          })
+          .eq('name', toolId!); // ❗ غيّري إلى 'id' إذا كان toolId هو UUID
+
+      setState(() {
+        nextInspectionDate = newMaintenanceDate;
+      });
+    }
 
     if (mounted) {
       setState(() => isApproved = true);

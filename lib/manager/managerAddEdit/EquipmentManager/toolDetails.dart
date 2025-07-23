@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/toolReports.dart';
-import 'package:FireWatch/manager/managerAddEdit/EquipmentManager/toolsAction.dart';
 import 'dart:ui' as ui;
 
 class ToolDetailsPage extends StatelessWidget {

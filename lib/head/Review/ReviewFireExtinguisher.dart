@@ -33,6 +33,7 @@ class _FireExtinguisherHeadReviewPageState
   DateTime? inspectionDate;
   DateTime? nextInspectionDate;
   Map<String, dynamic>? reportData;
+  String? toolId;
 
   List<String> steps = [
     'الطلاء لجسم الطفاية',
@@ -65,6 +66,22 @@ class _FireExtinguisherHeadReviewPageState
       notes[s] = TextEditingController();
     }
     _loadData();
+    _fetchToolId(); // ✅ تحميل tool_id من جدول corrective_tasks
+  }
+
+  Future<void> _fetchToolId() async {
+    final task =
+        await supabase
+            .from('corrective_tasks')
+            .select('tool_id')
+            .eq('id', widget.taskId)
+            .maybeSingle();
+
+    if (task != null) {
+      setState(() {
+        toolId = task['tool_id'];
+      });
+    }
   }
 
   Future<void> _loadData() async {
@@ -181,9 +198,7 @@ class _FireExtinguisherHeadReviewPageState
       otherNotes.text.trim(),
     );
 
-    if (original != null &&
-        original['steps'] != null &&
-        original['steps'] is List) {
+    if (original != null && original['steps'] is List) {
       for (final step in editedSteps) {
         final label = step['step'];
         final originalStep = (original['steps'] as List).firstWhere(
@@ -192,9 +207,8 @@ class _FireExtinguisherHeadReviewPageState
         );
 
         if (originalStep != null) {
-          final bool oldChecked = originalStep['checked'] == true;
-          final bool newChecked = step['checked'] == true;
-
+          final oldChecked = originalStep['checked'] == true;
+          final newChecked = step['checked'] == true;
           if (oldChecked != newChecked) {
             await saveEdit(
               'الخطوة: $label - checked',
@@ -205,7 +219,6 @@ class _FireExtinguisherHeadReviewPageState
 
           final oldNote = (originalStep['note'] ?? '').toString();
           final newNote = (step['note'] ?? '').toString();
-
           if (oldNote.trim() != newNote.trim()) {
             await saveEdit('الخطوة: $label - note', oldNote, newNote);
           }
@@ -214,6 +227,26 @@ class _FireExtinguisherHeadReviewPageState
     }
 
     await supabase.from(table).update(updates).eq('task_id', widget.taskId);
+
+    // ✅ Update next maintenance date if toolId is known
+    if (toolId != null) {
+      final newMaintenanceDate = DateTime.now().add(const Duration(days: 365));
+      print('🔧 Updating safety_tools where name = $toolId');
+
+      await supabase
+          .from('safety_tools')
+          .update({
+            'last_maintenance_date': DateTime.now().toIso8601String(),
+            'next_maintenance_date': newMaintenanceDate.toIso8601String(),
+          })
+          .eq('name', toolId!);
+
+      setState(() {
+        nextInspectionDate = newMaintenanceDate;
+      });
+    }
+
+    // ✅ Mark periodic task as completed
     if (widget.taskType == 'دوري') {
       await supabase
           .from('periodic_tasks')
@@ -224,6 +257,7 @@ class _FireExtinguisherHeadReviewPageState
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('تم اعتماد التقرير.')));
+
     setState(() => isApproved = true);
   }
 
