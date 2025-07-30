@@ -21,6 +21,8 @@ class _MaintenanceReportsPageState extends State<MaintenanceReportsPage> {
   DateTime? endDate;
   String? selectedTool;
   String? selectedTechnician;
+  String? selectedMaterialType;
+  Set<String> allMaterialTypes = {};
 
   Set<String> allTools = {};
   Set<String> allTechnicians = {};
@@ -47,6 +49,12 @@ class _MaintenanceReportsPageState extends State<MaintenanceReportsPage> {
       allTools = data.map((e) => e['tool_name']?.toString() ?? '').toSet();
       allTechnicians =
           data.map((e) => e['technician_name']?.toString() ?? '').toSet();
+      allMaterialTypes =
+          data
+              .map((e) => e['material_type']?.toString() ?? '')
+              .where((e) => e.isNotEmpty)
+              .toSet();
+
       isLoading = false;
     });
   }
@@ -71,8 +79,11 @@ class _MaintenanceReportsPageState extends State<MaintenanceReportsPage> {
           final matchTech =
               selectedTechnician == null ||
               log['technician_name'] == selectedTechnician;
+          final matchMaterial =
+              selectedMaterialType == null ||
+              log['material_type'] == selectedMaterialType;
 
-          return matchDate && matchTool && matchTech;
+          return matchDate && matchTool && matchTech && matchMaterial;
         }).toList();
 
     setState(() => logs = filtered);
@@ -143,6 +154,14 @@ class _MaintenanceReportsPageState extends State<MaintenanceReportsPage> {
                               allTechnicians,
                               (val) => setState(() => selectedTechnician = val),
                             ),
+                            _buildDropdown(
+                              'نوع المادة',
+                              selectedMaterialType,
+                              allMaterialTypes,
+                              (val) =>
+                                  setState(() => selectedMaterialType = val),
+                            ),
+
                             ElevatedButton(
                               onPressed: _applyFilters,
                               child: const Text('تطبيق الفلاتر'),
@@ -154,6 +173,8 @@ class _MaintenanceReportsPageState extends State<MaintenanceReportsPage> {
                                     endDate = null;
                                     selectedTool = null;
                                     selectedTechnician = null;
+                                    selectedMaterialType = null;
+
                                     logs = allLogs;
                                   }),
                               child: const Text('إعادة تعيين'),
