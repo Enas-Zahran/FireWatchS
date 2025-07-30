@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:FireWatch/manager/managerReports/ManagerReportsCorrectiveEmergency/Corrective.dart';
-import 'package:FireWatch/manager/managerReports/ManagerReportsCorrectiveEmergency/Emergency.dart';
+import 'package:FireWatch/manager/managerReports/Working/ManagerReportsCorrectiveEmergency/Corrective.dart';
+import 'package:FireWatch/manager/managerReports/Working/ManagerReportsCorrectiveEmergency/Emergency.dart';
 import 'package:FireWatch/My/BuildTile.dart';
 class ApprovedReportsDashboardPage extends StatelessWidget {
   static const String routeName = 'approvedReportsDashboardPage';

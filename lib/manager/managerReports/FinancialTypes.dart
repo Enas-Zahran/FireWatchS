@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:FireWatch/manager/managerReports/Working/managerReportsDashboard.dart';
-import 'package:FireWatch/manager/managerReports/FinancialTypes.dart';
+import 'package:FireWatch/manager/managerReports/FinancialReports.dart';
 import 'package:FireWatch/My/BuildTile.dart';
+import 'package:FireWatch/manager/managerReports/maintenanceReports.dart';
 
-class ReportsDashboardPage extends StatelessWidget {
+class FinancialTypesPage extends StatelessWidget {
   static const routeName = 'reportsDashboard';
 
-  const ReportsDashboardPage({super.key});
+  const FinancialTypesPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +16,10 @@ class ReportsDashboardPage extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: const Color(0xff00408b),
           title: const Center(
-            child: Text('لوحة التقارير', style: TextStyle(color: Colors.white)),
+            child: Text(
+              'لوحة التقارير المالية',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -27,20 +30,16 @@ class ReportsDashboardPage extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(30, 120, 30, 30),
           children: [
             BuildTile(
-              title: 'الأعمال',
-              icon: Icons.assignment_turned_in,
-              destination: ManagerReportsDashboardPage(),
+              title: 'شراء الادوات',
+              icon: Icons.shop,
+              destination: FinancialReportsPage(),
             ),
             const SizedBox(height: 12),
             BuildTile(
-             
-              title: 'المالية',
+              title: 'الاجرائات',
               icon: Icons.attach_money,
-              destination: 
-                   FinancialTypesPage()),
-                
-              
-            
+              destination: MaintenanceReportsPage(),
+            ),
           ],
         ),
       ),

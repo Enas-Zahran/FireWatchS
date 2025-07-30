@@ -46,6 +46,7 @@ class _HeadNotificationsPageState extends State<HeadNotificationsPage> {
       ''')
         .neq('status', 'done')
         .not('assigned_to', 'is', null)
+     
         .gte('tool_id.next_maintenance_date', now.toIso8601String())
         .lte('tool_id.next_maintenance_date', threeDaysLater.toIso8601String());
 
@@ -67,6 +68,7 @@ class _HeadNotificationsPageState extends State<HeadNotificationsPage> {
         )
       ''')
         .neq('status', 'done')
+        
         .not('assigned_to', 'is', null);
 
     print('🟨 corrective length = ${corrective.length}');
@@ -86,6 +88,7 @@ class _HeadNotificationsPageState extends State<HeadNotificationsPage> {
           name
         )
       ''')
+     
         .neq('status', 'done')
         .not('assigned_to', 'is', null);
 

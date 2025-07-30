@@ -18,11 +18,30 @@ class TasksMainPage extends StatefulWidget {
 
 class _TasksMainPageState extends State<TasksMainPage> {
   bool _hasPendingRequests = false;
+  bool hasNotifications = false;
 
   @override
   void initState() {
     super.initState();
     _checkPendingRequests();
+    _checkManagerNotifications();
+  }
+
+  Future<void> _checkManagerNotifications() async {
+    final now = DateTime.now();
+    final twoDaysLater = now.add(const Duration(days: 2));
+
+    final response = await Supabase.instance.client
+        .from('periodic_tasks')
+        .select('id, tool_id!inner(next_maintenance_date)')
+        .eq('completed', false)
+        .not('assigned_to', 'is', null)
+        .gte('tool_id.next_maintenance_date', now.toIso8601String())
+        .lte('tool_id.next_maintenance_date', twoDaysLater.toIso8601String());
+
+    setState(() {
+      hasNotifications = response.isNotEmpty;
+    });
   }
 
   Future<void> _checkPendingRequests() async {
@@ -86,6 +105,7 @@ class _TasksMainPageState extends State<TasksMainPage> {
           title: const Center(
             child: Text('لوحة المهام', style: TextStyle(color: Colors.white)),
           ),
+          iconTheme: IconThemeData(color: Colors.white),
           actions: [
             IconButton(
               icon: Stack(
@@ -110,29 +130,42 @@ class _TasksMainPageState extends State<TasksMainPage> {
                     builder: (context) => const PendingEmergencyRequestsPage(),
                   ),
                 );
-                _checkPendingRequests(); 
+                _checkPendingRequests();
               },
             ),
             IconButton(
               icon: const Icon(Icons.add, color: Colors.white),
               onPressed: () => _showAddOptions(context),
             ),
-            IconButton(
-              icon: const Icon(Icons.notifications, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const NotificationsPage(),
+            Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications, color: Colors.white),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NotificationsPage(),
+                      ),
+                    );
+                  },
+                ),
+                if (hasNotifications)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                   ),
-                );
-              },
+              ],
             ),
           ],
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
         ),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(30, 70, 30, 50),

@@ -201,29 +201,35 @@ class _FireExtinguisherReportPageState
 
     try {
       print('🟢 Inserting report to fire_extinguisher_reports...');
-      await supabase.from('fire_extinguisher_reports').insert({
-        'task_id': widget.taskId,
-        'tool_name': widget.toolName,
-        'inspection_date': currentDate!.toIso8601String(),
-        'next_inspection_date': nextDate!.toIso8601String(),
-        'company_name': companyName,
-        'company_rep': companyRep.text.trim(),
-        'technician_name': widget.technicianName,
-        'steps': stepsData,
-        'other_notes': otherNotesController.text.trim(),
-        'technician_signature': signatureBase64,
-        'company_signature': companyBase64,
-        'technician_signed': true,
-        'company_signed': true,
-      });
+      final inserted =
+          await supabase
+              .from('fire_extinguisher_reports')
+              .insert({
+                'task_id': widget.taskId,
+                'tool_name': widget.toolName,
+                'inspection_date': currentDate!.toIso8601String(),
+                'next_inspection_date': nextDate!.toIso8601String(),
+                'company_name': companyName,
+                'company_rep': companyRep.text.trim(),
+                'technician_name': widget.technicianName,
+                'steps': stepsData,
+                'other_notes': otherNotesController.text.trim(),
+                'technician_signature': signatureBase64,
+                'company_signature': companyBase64,
+                'technician_signed': true,
+                'company_signed': true,
+              })
+              .select('id')
+              .single();
 
-      print('✅ Report inserted');
+      final reportId = inserted['id'];
+      print('✅ Report inserted with ID: $reportId');
 
       await supabase
           .from('periodic_tasks')
-          .update({'status': 'done'})
+          .update({'status': 'done', 'report_id': reportId})
           .eq('id', widget.taskId);
-      print('✅ Task marked as done');
+      print('✅ Task marked as done and report_id set');
 
       await supabase
           .from('safety_tools')

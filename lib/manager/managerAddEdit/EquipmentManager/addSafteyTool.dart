@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:FireWatch/My/InputDecoration.dart';
-import 'dart:ui'as ui;
+import 'dart:ui' as ui;
+
 class AddSafetyToolPage extends StatefulWidget {
   static const routeName = '/addTool';
 
@@ -29,9 +30,13 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
   }
 
   Future<void> _fetchLocationCodes() async {
-    final response = await Supabase.instance.client.from('locations').select('code');
+    final response = await Supabase.instance.client
+        .from('locations')
+        .select('code');
     setState(() {
-      locationCodes = List<String>.from(response.map((e) => e['code'].toString().toUpperCase()));
+      locationCodes = List<String>.from(
+        response.map((e) => e['code'].toString().toUpperCase()),
+      );
     });
   }
 
@@ -51,11 +56,25 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
     'ثاني اكسيد الكربون': ['2 kg', '5 kg', '6 kg', '10 kg', '20 kg', '30 kg'],
     'البودرة الجافة': ['1 kg', '2 kg', '6 kg', '12 kg', '25 kg', '50 kg'],
     'الرغوة (B.C.F)': [
-      '1 L', '2 L', '3 L', '4 L', '6 L', '9 L', '25 L', '50 L',
+      '1 L',
+      '2 L',
+      '3 L',
+      '4 L',
+      '6 L',
+      '9 L',
+      '25 L',
+      '50 L',
     ],
     'الماء': ['1 L', '2 L', '3 L', '4 L', '6 L', '9 L', '25 L', '50 L'],
     'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي': [
-      '1 kg', '2 kg', '3 kg', '4 kg', '6 kg', '9 kg', '25 kg', '50 kg',
+      '1 kg',
+      '2 kg',
+      '3 kg',
+      '4 kg',
+      '6 kg',
+      '9 kg',
+      '25 kg',
+      '50 kg',
     ],
   };
 
@@ -65,32 +84,45 @@ class _AddSafetyToolPageState extends State<AddSafetyToolPage> {
   }
 
   Future<void> _addTool() async {
-    if (!_formKey.currentState!.validate() || _purchaseDate == null) return;
+    if (!_formKey.currentState!.validate() || _purchaseDate == null) {
+      print('[DEBUG] Form is not valid or purchase date is null');
+      return;
+    }
 
     final toolName = _nameController.text.trim();
     final toolCode = toolName.isNotEmpty ? toolName[0].toUpperCase() : '';
+    print('[DEBUG] Tool name: $toolName, Tool code: $toolCode');
 
-   final location = await Supabase.instance.client
-    .from('locations')
-    .select('id')
-    .eq('code', toolCode)
-    .maybeSingle();
+    final location =
+        await Supabase.instance.client
+            .from('locations')
+            .select('id')
+            .eq('code', toolCode)
+            .maybeSingle();
 
-if (location == null) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('⚠️ لا يوجد مكان لهذا الرمز، يرجى التأكد من أول حرف في اسم الأداة.'),
-    ),
-  );
-  return;
-}
-final locationId = location['id'];
+    print('[DEBUG] Location result: $location');
 
-    final existing = await Supabase.instance.client
-        .from('safety_tools')
-        .select('id')
-        .eq('name', toolName)
-        .maybeSingle();
+    if (location == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '⚠️ لا يوجد مكان لهذا الرمز، يرجى التأكد من أول حرف في اسم الأداة.',
+          ),
+        ),
+      );
+      return;
+    }
+    final locationId = location['id'];
+    print('[DEBUG] Location ID: $locationId');
+
+    final existing =
+        await Supabase.instance.client
+            .from('safety_tools')
+            .select('id')
+            .eq('name', toolName)
+            .maybeSingle();
+
+    print('[DEBUG] Existing tool check: $existing');
 
     if (existing != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -108,18 +140,26 @@ final locationId = location['id'];
     );
 
     try {
-      final priceData = await Supabase.instance.client
-          .from('safety_tool_prices')
-          .select('price')
-          .eq('tool_type', _selectedType ?? '')
-          .eq('material_type', _selectedMaterial ?? '')
-          .eq('capacity', _selectedCapacity ?? '')
-          .ilike('company_name', _companyController.text.trim())
-          .maybeSingle();
+      final priceData =
+          await Supabase.instance.client
+              .from('safety_tool_prices')
+              .select('price')
+              .eq('tool_type', _selectedType ?? '')
+              .eq('material_type', _selectedMaterial ?? '')
+              .eq('capacity', _selectedCapacity ?? '')
+              .ilike('company_name', _companyController.text.trim())
+              .maybeSingle();
 
-      _price = priceData != null ? double.tryParse(priceData['price'].toString()) : 0.0;
+      print('[DEBUG] Price data: $priceData');
 
-      await Supabase.instance.client.from('safety_tools').insert({
+      _price =
+          priceData != null
+              ? double.tryParse(priceData['price'].toString())
+              : 0.0;
+
+      print('[DEBUG] Parsed price: $_price');
+
+      final insertData = {
         'name': _capitalize(toolName),
         'type': _selectedType,
         'material_type': _selectedMaterial,
@@ -129,13 +169,21 @@ final locationId = location['id'];
         'purchase_date': _purchaseDate!.toIso8601String(),
         'last_maintenance_date': DateTime.now().toIso8601String(),
         'next_maintenance_date': nextMaintenanceDate.toIso8601String(),
-         'location_id': locationId,
-      });
+        'location_id': locationId,
+        'total_cost': 0.0,
+      };
+
+      print('[DEBUG] Inserting tool data: $insertData');
+
+      await Supabase.instance.client.from('safety_tools').insert(insertData);
 
       if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ أثناء الإضافة: $e')));
+      print('[ERROR] Insert failed: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('خطأ أثناء الإضافة: $e')));
     }
   }
 
@@ -206,7 +254,10 @@ final locationId = location['id'];
                         },
                       ),
                     const SizedBox(height: 12),
-                    buildTextField('الشركة التي تم الشراء منها', _companyController),
+                    buildTextField(
+                      'الشركة التي تم الشراء منها',
+                      _companyController,
+                    ),
                     const SizedBox(height: 12),
                     ListTile(
                       tileColor: Colors.grey.shade200,
@@ -234,7 +285,10 @@ final locationId = location['id'];
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _addTool,
-                      child: const Text('إضافة الأداة', style: TextStyle(color: Colors.white)),
+                      child: const Text(
+                        'إضافة الأداة',
+                        style: TextStyle(color: Colors.white),
+                      ),
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(400, 50),
                         backgroundColor: const Color(0xff00408b),
@@ -259,7 +313,8 @@ final locationId = location['id'];
           labelText: label,
           hintText: 'أدخل $label',
         ),
-        validator: (val) => val == null || val.isEmpty ? 'يرجى إدخال $label' : null,
+        validator:
+            (val) => val == null || val.isEmpty ? 'يرجى إدخال $label' : null,
         textAlign: TextAlign.right,
       ),
     );
@@ -276,7 +331,10 @@ final locationId = location['id'];
       child: DropdownButtonFormField<String>(
         value: value,
         decoration: customInputDecoration.copyWith(labelText: label),
-        items: items.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+        items:
+            items
+                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                .toList(),
         onChanged: onChanged,
         validator: (val) => val == null ? 'يرجى اختيار $label' : null,
       ),

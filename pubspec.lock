@@ -257,7 +257,7 @@ packages:
     source: hosted
     version: "6.2.1"
   gotrue:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: gotrue
       sha256: "04a6efacffd42773ed96dc752f19bb20a1fbc383e81ba82659072b775cf62912"

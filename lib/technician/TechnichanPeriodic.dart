@@ -85,6 +85,7 @@ class _TechnicianPeriodicLocationsPageState
 
       print('🎯 Assigned Tasks Count: ${periodicTasks.length}');
 
+      if (!mounted) return;
       setState(() {
         locations = List<Map<String, dynamic>>.from(locs);
         assignedTasks = periodicTasks;
@@ -94,6 +95,7 @@ class _TechnicianPeriodicLocationsPageState
     } catch (e, stack) {
       print('❌ Error while loading data: $e');
       print(stack);
+      if (!mounted) return;
       setState(() => _loading = false);
     }
   }

@@ -110,10 +110,8 @@ class _ApprovedCorrectiveTasksPageState
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('رمز الأداة: ${request['tool_code']}'),
                             Text('السبب: ${request['usage_reason']}'),
                             Text('الإجراء المتخذ: ${request['action_taken']}'),
-                            Text('الدور: ${request['created_by_role']}'),
                             Text('الحالة: ${task['status'] ?? 'غير معروف'}'),
                             if (createdAt != null)
                               Text(

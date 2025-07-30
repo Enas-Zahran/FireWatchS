@@ -191,10 +191,7 @@ class _EditMaintenancePricePageState extends State<EditMaintenancePricePage> {
                           if (_materialType == 'ثاني اكسيد الكربون') {
                             items = ['محبس طفاية CO2', ...componentNamesAll];
                           } else if (_materialType == 'البودرة الجافة') {
-                            items = [
-                              'سعر رأس الطفاية كامل لطفاية البودرة مع المقبض و الخرطوم و السيفون الداخلي و ساعة الضغط و مسمار الأمان',
-                              ...componentNamesAll,
-                            ];
+                            items = ['متعدد', ...componentNamesAll];
                           } else if ([
                             'الرغوة (B.C.F)',
                             'الماء',

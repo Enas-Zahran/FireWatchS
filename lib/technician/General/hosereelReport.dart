@@ -109,152 +109,147 @@ class _HoseReelReportPageState extends State<HoseReelReportPage> {
   }
 
   Future<void> _submitReport() async {
-    final techImage = await technicianSignature.toImage();
-    final techByteData = await techImage?.toByteData(
-      format: ui.ImageByteFormat.png,
+  final techImage = await technicianSignature.toImage();
+  final techByteData = await techImage?.toByteData(format: ui.ImageByteFormat.png);
+  final techSigBytes = techByteData?.buffer.asUint8List();
+
+  final companyImage = await companySignature.toImage();
+  final companyByteData = await companyImage?.toByteData(format: ui.ImageByteFormat.png);
+  final companySigBytes = companyByteData?.buffer.asUint8List();
+
+  if (!_formKey.currentState!.validate() ||
+      currentDate == null ||
+      techSigBytes == null ||
+      companySigBytes == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
     );
-    final techSigBytes = techByteData?.buffer.asUint8List();
-
-    final companyImage = await companySignature.toImage();
-    final companyByteData = await companyImage?.toByteData(
-      format: ui.ImageByteFormat.png,
-    );
-    final companySigBytes = companyByteData?.buffer.asUint8List();
-
-    if (!_formKey.currentState!.validate() ||
-        currentDate == null ||
-        techSigBytes == null ||
-        companySigBytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('الرجاء تعبئة كل الحقول وتوقيع النماذج')),
-      );
-      return;
-    }
-
-    final user = supabase.auth.currentUser;
-    if (user == null) return;
-
-    final stepsData =
-        steps
-            .map(
-              (s) => {
-                'step': s,
-                'checked': checks[s],
-                'note': notes[s]!.text.trim(),
-              },
-            )
-            .toList();
-
-    final exportMaterials =
-        stepsData
-            .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
-            .map((s) => {'toolName': widget.toolName, 'note': s['note']})
-            .toList();
-
-    if (otherNotesController.text.trim().isNotEmpty) {
-      exportMaterials.add({
-        'toolName': widget.toolName,
-        'note': otherNotesController.text.trim(),
-      });
-    }
-
-    try {
-      await supabase.from('hose_reel_reports').insert({
-        'task_id': widget.taskId,
-        'task_type': widget.taskType,
-        'tool_name': widget.toolName,
-        'inspection_date': currentDate!.toIso8601String(),
-        'next_inspection_date': nextDate!.toIso8601String(),
-        'company_name': companyName,
-        'company_rep': companyRep.text.trim(),
-        'technician_name': technicianName,
-        'steps': stepsData,
-        'other_notes': otherNotesController.text.trim(),
-        'technician_signed': true,
-        'company_signed': true,
-        'technician_signature': base64Encode(techSigBytes),
-        'company_signature': base64Encode(companySigBytes),
-      });
-
-      await supabase
-          .from('safety_tools')
-          .update({
-            'last_maintenance_date': currentDate!.toIso8601String(),
-            'next_maintenance_date': nextDate!.toIso8601String(),
-          })
-          .eq('name', widget.toolName);
-
-      if (widget.taskType == 'دوري') {
-        await supabase
-            .from('periodic_tasks')
-            .update({'status': 'done'})
-            .eq('id', widget.taskId);
-      } else if (widget.taskType == 'علاجي') {
-        await supabase
-            .from('corrective_tasks')
-            .update({'status': 'done'})
-            .eq('id', widget.taskId);
-      } else if (widget.taskType == 'طارئ') {
-        await supabase
-            .from('emergency_tasks')
-            .update({'status': 'done'})
-            .eq('id', widget.taskId);
-      }
-
-      if (!mounted) return;
-
-      if (exportMaterials.isNotEmpty) {
-        final existing =
-            await supabase
-                .from('export_requests')
-                .select('id, tool_codes')
-                .eq('created_by', user.id)
-                .filter('is_approved', 'is', null)
-                .order('created_at', ascending: false)
-                .limit(1)
-                .maybeSingle();
-
-        final reasonText = exportMaterials.map((m) => m['note']).join(' - ');
-
-        if (existing != null) {
-          final updatedTools = [
-            ...(existing['tool_codes'] ?? []),
-            ...exportMaterials,
-          ];
-
-          await supabase
-              .from('export_requests')
-              .update({
-                'tool_codes': updatedTools,
-                'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
-              })
-              .eq('id', existing['id']);
-        } else {
-          await supabase.from('export_requests').insert({
-            'tool_codes': exportMaterials,
-            'created_by': user.id,
-            'created_by_name': technicianName,
-            'created_by_role': 'فني السلامة العامة',
-            'usage_reason': reasonText,
-            'action_taken': 'تقرير ${widget.taskType} - خرطوم الحريق',
-            'is_approved': null,
-            'is_submitted': false,
-            'created_at': DateTime.now().toIso8601String(),
-          });
-        }
-      }
-
-      Navigator.pop(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('تم حفظ التقرير')));
-    } catch (e) {
-      print('🔥 Supabase error: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')));
-    }
+    return;
   }
+
+  final user = supabase.auth.currentUser;
+  if (user == null) return;
+
+  final stepsData = steps.map((s) {
+    return {
+      'step': s,
+      'checked': checks[s],
+      'note': notes[s]!.text.trim(),
+    };
+  }).toList();
+
+  final exportMaterials = stepsData
+      .where((s) => s['note'] != null && s['note'].toString().isNotEmpty)
+      .map((s) => {'toolName': widget.toolName, 'note': s['note']})
+      .toList();
+
+  if (otherNotesController.text.trim().isNotEmpty) {
+    exportMaterials.add({
+      'toolName': widget.toolName,
+      'note': otherNotesController.text.trim(),
+    });
+  }
+
+  try {
+    final inserted = await supabase
+        .from('hose_reel_reports')
+        .insert({
+          'task_id': widget.taskId,
+          'task_type': widget.taskType,
+          'tool_name': widget.toolName,
+          'inspection_date': currentDate!.toIso8601String(),
+          'next_inspection_date': nextDate!.toIso8601String(),
+          'company_name': companyName,
+          'company_rep': companyRep.text.trim(),
+          'technician_name': technicianName,
+          'steps': stepsData,
+          'other_notes': otherNotesController.text.trim(),
+          'technician_signed': true,
+          'company_signed': true,
+          'technician_signature': base64Encode(techSigBytes),
+          'company_signature': base64Encode(companySigBytes),
+        })
+        .select('id')
+        .single();
+
+    final reportId = inserted['id'];
+
+    await supabase
+        .from('safety_tools')
+        .update({
+          'last_maintenance_date': currentDate!.toIso8601String(),
+          'next_maintenance_date': nextDate!.toIso8601String(),
+        })
+        .eq('name', widget.toolName);
+
+    if (widget.taskType == 'دوري') {
+      await supabase
+          .from('periodic_tasks')
+          .update({'status': 'done', 'report_id': reportId})
+          .eq('id', widget.taskId);
+    } else if (widget.taskType == 'علاجي') {
+      await supabase
+          .from('corrective_tasks')
+          .update({'status': 'done'})
+          .eq('id', widget.taskId);
+    } else if (widget.taskType == 'طارئ') {
+      await supabase
+          .from('emergency_tasks')
+          .update({'status': 'done'})
+          .eq('id', widget.taskId);
+    }
+
+    if (!mounted) return;
+
+    if (exportMaterials.isNotEmpty) {
+      final existing = await supabase
+          .from('export_requests')
+          .select('id, tool_codes')
+          .eq('created_by', user.id)
+          .filter('is_approved', 'is', null)
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      final reasonText = exportMaterials.map((m) => m['note']).join(' - ');
+
+      if (existing != null) {
+        final updatedTools = [...(existing['tool_codes'] ?? []), ...exportMaterials];
+
+        await supabase
+            .from('export_requests')
+            .update({
+              'tool_codes': updatedTools,
+              'usage_reason': updatedTools.map((m) => m['note']).join(' - '),
+            })
+            .eq('id', existing['id']);
+      } else {
+        await supabase.from('export_requests').insert({
+          'tool_codes': exportMaterials,
+          'created_by': user.id,
+          'created_by_name': technicianName,
+          'created_by_role': 'فني السلامة العامة',
+          'usage_reason': reasonText,
+          'action_taken': 'تقرير ${widget.taskType} - خرطوم الحريق',
+          'is_approved': null,
+          'is_submitted': false,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      }
+    }
+
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تم حفظ التقرير')),
+    );
+  } catch (e) {
+    print('🔥 Supabase error: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('حدث خطأ أثناء الحفظ: $e')),
+    );
+  }
+}
+
 
   Future<void> _fetchCompany() async {
     final currentYear = DateTime.now().year;

@@ -154,10 +154,7 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
                             ...componentNamesAll,
                           ];
                         } else if (_materialType == 'البودرة الجافة') {
-                          return <String>[
-                            'سعر رأس الطفاية كامل لطفاية البودرة مع المقبض و الخرطوم و السيفون الداخلي و ساعة الضغط و مسمار الأمان',
-                            ...componentNamesAll,
-                          ];
+                          return <String>['متعدد', ...componentNamesAll];
                         } else if ([
                           'الرغوة (B.C.F)',
                           'الماء',

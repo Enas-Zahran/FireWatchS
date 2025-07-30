@@ -6,6 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:FireWatch/My/InputDecoration.dart';
 import 'package:FireWatch/Start/startPage.dart';
+import 'package:FireWatch/Start/resetpassword.dart';
+import 'dart:async';
+import 'package:app_links/app_links.dart';
+import 'package:FireWatch/global.dart';
+
 
 class SignInPage extends StatefulWidget {
   static const String signinRoute = 'signin';
@@ -13,6 +18,42 @@ class SignInPage extends StatefulWidget {
   @override
   _SignInPageState createState() => _SignInPageState();
 }
+void initDeepLinks() {
+  final appLinks = AppLinks();
+
+  Future<void> handleUri(Uri uri) async {
+    if (uri.host == 'reset-password' && uri.fragment.isNotEmpty) {
+      final params = Uri.splitQueryString(uri.fragment);
+      final accessToken = params['access_token'];
+      final refreshToken = params['refresh_token'];
+
+      if (accessToken != null && refreshToken != null) {
+await Supabase.instance.client.auth.setSession(refreshToken);
+
+
+        navigatorKey.currentState?.pushNamed('/newPassword');
+      }
+    }
+  }
+
+  // Handle initial deep link
+  appLinks.getInitialAppLink().then((uri) {
+    if (uri != null) {
+      handleUri(uri);
+    }
+  });
+
+  // Handle while app is running
+  appLinks.uriLinkStream.listen((uri) {
+    if (uri != null) {
+      handleUri(uri);
+    }
+  });
+}
+
+
+
+
 
 class _SignInPageState extends State<SignInPage> {
   final _formKey = GlobalKey<FormState>();
@@ -100,6 +141,15 @@ class _SignInPageState extends State<SignInPage> {
       }
     }
   }
+@override
+void initState() {
+  super.initState();
+  // Delay to ensure context is fully built
+  Future.delayed(Duration.zero, () {
+    initDeepLinks();
+  });
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -212,13 +262,13 @@ class _SignInPageState extends State<SignInPage> {
                           ),
                           TextButton(
                             onPressed: () {
-                              // Navigator.push(
-                              //   context,
-                              //   MaterialPageRoute(
-                              //     builder:
-                              //         (context) => ResetPasswordRequestPage(),
-                              //   ),
-                              // );
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => ResetPasswordRequestPage(),
+                                ),
+                              );
                             },
                             child: Text(
                               'اعادة تعيين كلمة السر',

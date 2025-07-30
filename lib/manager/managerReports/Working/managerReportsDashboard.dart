@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:FireWatch/manager/managerReports/managerPeriodicReport.dart';
-import 'package:FireWatch/manager/managerReports/managerCorrectiveReport.dart';
-import 'package:FireWatch/manager/managerReports/managerEmergencyReport.dart';
+import 'package:FireWatch/manager/managerReports/Working/managerPeriodicReport.dart';
+import 'package:FireWatch/manager/managerReports/Working/managerCorrectiveReport.dart';
+import 'package:FireWatch/manager/managerReports/Working/managerEmergencyReport.dart';
 import 'package:FireWatch/My/BuildTile.dart';
-import 'package:FireWatch/manager/managerReports/ManagerReportsCorrectiveEmergency/CorrectiveEmergencyDashboard.dart';
+import 'package:FireWatch/manager/managerReports/Working/ManagerReportsCorrectiveEmergency/CorrectiveEmergencyDashboard.dart';
 class ManagerReportsDashboardPage extends StatelessWidget {
   static const String routeName = 'managerReportsDashboardPage';
 

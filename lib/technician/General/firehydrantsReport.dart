@@ -192,22 +192,30 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
     }
 
     try {
-      await supabase.from('fire_hydrant_reports').insert({
-        'tool_name': widget.toolName,
-        'inspection_date': currentDate!.toIso8601String(),
-        'next_inspection_date': nextDate!.toIso8601String(),
-        'company_name': companyName,
-        'company_rep': companyRep.text.trim(),
-        'technician_name': technicianName,
-        'steps': stepsData,
-        'other_notes': otherNotesController.text.trim(),
-        'task_id': widget.taskId,
-        'task_type': widget.taskType,
-        'technician_signed': true,
-        'company_signed': true,
-        'technician_signature': base64Encode(techSigBytes),
-        'company_signature': base64Encode(companySigBytes),
-      });
+      final inserted =
+          await supabase
+              .from('fire_hydrant_reports')
+              .insert({
+                'tool_name': widget.toolName,
+                'inspection_date': currentDate!.toIso8601String(),
+                'next_inspection_date': nextDate!.toIso8601String(),
+                'company_name': companyName,
+                'company_rep': companyRep.text.trim(),
+                'technician_name': technicianName,
+                'steps': stepsData,
+                'other_notes': otherNotesController.text.trim(),
+                'task_id': widget.taskId,
+                'task_type': widget.taskType,
+                'technician_signed': true,
+                'company_signed': true,
+                'technician_signature': base64Encode(techSigBytes),
+                'company_signature': base64Encode(companySigBytes),
+              })
+              .select('id')
+              .single();
+
+      final reportId = inserted['id'];
+      print('✅ Report inserted with ID: $reportId');
 
       await supabase
           .from('safety_tools')
@@ -220,7 +228,7 @@ class _FireHydrantReportPageState extends State<FireHydrantReportPage> {
       if (widget.taskType == 'دوري') {
         await supabase
             .from('periodic_tasks')
-            .update({'status': 'done'})
+            .update({'status': 'done', 'report_id': reportId})
             .eq('id', widget.taskId);
       } else if (widget.taskType == 'علاجي') {
         await supabase

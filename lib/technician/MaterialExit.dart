@@ -85,13 +85,28 @@ class _MaterialExitAuthorizationPageState
   }
 
   Widget buildComponentDropdown(int index, List<String> items) {
+    final selected = materials[index]['component_name']?.toString().trim();
+
+    final uniqueItems = items.map((e) => e.trim()).toSet().toList();
+
+    // Force reset if selected value not in current dropdown list
+    final safeValue = uniqueItems.contains(selected) ? selected : null;
+    if (selected != null && !uniqueItems.contains(selected)) {
+      materials[index]['component_name'] = null;
+    }
+
     return DropdownButtonFormField<String>(
-      value: materials[index]['component_name'],
+      value: safeValue,
       decoration: const InputDecoration(labelText: 'اسم القطعة'),
       items:
-          items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-      onChanged:
-          (val) => setState(() => materials[index]['component_name'] = val),
+          uniqueItems
+              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .toList(),
+      onChanged: (val) {
+        setState(() {
+          materials[index]['component_name'] = val?.trim();
+        });
+      },
     );
   }
 
@@ -112,6 +127,59 @@ class _MaterialExitAuthorizationPageState
         technicianName = userData['name'];
       });
     }
+  }
+
+  Future<String?> _fetchActionId(Map<String, dynamic> material) async {
+    final supabase = Supabase.instance.client;
+    print(
+      '[🔍] Lookup for action: '
+      'name=${material['action_name'] ?? '❌'}, '
+      'tool=${material['tool_type'] ?? '❌'}, '
+      'material=${material['material_type'] ?? '❌'}, '
+      'capacity=${material['capacity'] ?? '❌'}, '
+      'component=${material['component_name'] ?? '❌'}',
+    );
+
+    final actionName = material['action_name'];
+    final toolType =
+        (material['tool_type'] == null ||
+                material['tool_type'].toString().trim().isEmpty)
+            ? 'fire extinguisher'
+            : material['tool_type'].toString().trim();
+    final materialType = material['material_type'];
+    final capacity = material['capacity'];
+    final componentName = material['component_name'];
+
+    final query = supabase
+        .from('maintenance_prices')
+        .select('id')
+        .eq('action_name', actionName)
+        .eq('tool_type', toolType);
+
+    if (actionName == 'صيانة') {
+      if (materialType != null && capacity != null) {
+        query.eq('material_type', materialType).eq('capacity', capacity);
+      } else {
+        return null;
+      }
+    } else if (actionName == 'تركيب قطع غيار') {
+      if (materialType != null && componentName != null) {
+        query
+            .eq('material_type', materialType)
+            .eq('component_name', componentName);
+      } else {
+        return null;
+      }
+    } else if (actionName == 'تعبئة') {
+      if (materialType != null) {
+        query.eq('material_type', materialType);
+      } else {
+        return null;
+      }
+    }
+
+    final results = await query.limit(1).select();
+    return results.isNotEmpty ? results.first['id'] as String : null;
   }
 
   Future<void> _loadExportRequest() async {
@@ -154,24 +222,6 @@ class _MaterialExitAuthorizationPageState
         }
         materials = uniqueMap.values.toList();
       }
-
-      // ✅ Update tool status if return date has passed
-      final now = DateTime.now();
-      if (returnDateStr != null) {
-        final returnDate = DateTime.tryParse(returnDateStr);
-        if (returnDate != null && now.isAfter(returnDate)) {
-          for (final tool in materials) {
-            final toolName = tool['toolName'];
-            if (toolName != null && toolName is String) {
-              await supabase
-                  .from('safety_tools')
-                  .update({'status': 'صالحة'})
-                  .eq('name', toolName)
-                  .select();
-            }
-          }
-        }
-      }
     }
 
     setState(() => isLoading = false);
@@ -194,6 +244,23 @@ class _MaterialExitAuthorizationPageState
 
   Future<void> _submitAuthorization() async {
     final supabase = Supabase.instance.client;
+    //delete
+    for (final material in materials) {
+      print('🔧 Processing toolName: ${material['toolName']}');
+      final actionId = await _fetchActionId(material);
+      if (actionId != null) {
+        material['action_id'] = actionId;
+      } else {
+        print('❌ No action ID found for: ${material['toolName']}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تعذر تحديد الإجراء لأداة: ${material['toolName']}'),
+          ),
+        );
+        return;
+      }
+    }
+
     final user = supabase.auth.currentUser;
     if (user == null) {
       debugPrint('❌ No user logged in');
@@ -236,6 +303,21 @@ class _MaterialExitAuthorizationPageState
         'tool_codes': materials,
         'usage_reason': materials.map((m) => m['note']).join(' - '),
       };
+      for (final material in materials) {
+        final actionId = await _fetchActionId(material);
+        if (actionId != null) {
+          material['action_id'] = actionId;
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'تعذر تحديد الإجراء لأداة: ${material['toolName']}',
+              ),
+            ),
+          );
+          return;
+        }
+      }
 
       if (requestId != null) {
         await supabase
@@ -405,6 +487,8 @@ class _MaterialExitAuthorizationPageState
                             labelText: 'اسم الأداة',
                           ),
                           onChanged: (val) async {
+                            materials[index]['toolName'] =
+                                val; // Save tool name
                             final toolData =
                                 await Supabase.instance.client
                                     .from('safety_tools')
@@ -413,6 +497,17 @@ class _MaterialExitAuthorizationPageState
                                     )
                                     .eq('name', val)
                                     .maybeSingle();
+
+                            if (toolData != null) {
+                              setState(() {
+                                materials[index]['material_type'] =
+                                    toolData['material_type'];
+                                materials[index]['capacity'] =
+                                    toolData['capacity'];
+                                materials[index]['tool_type'] =
+                                    toolData['tool_type'];
+                              });
+                            }
                           },
                         ),
                         TextFormField(
@@ -490,7 +585,7 @@ class _MaterialExitAuthorizationPageState
                           else if (material['material_type'] ==
                               'البودرة الجافة')
                             buildComponentDropdown(index, [
-                              'سعر رأس الطفاية كامل لطفاية البودرة مع المقبض و الخرطوم و السيفون الداخلي و ساعة الضغط و مسمار الأمان',
+                              'متعدد',
                               'خرطوم طفاية حريق',
                               'سلندر خارجي لطفاية الحريق',
                               'ساعة ضغط',
@@ -581,7 +676,15 @@ class _MaterialExitAuthorizationPageState
               const SizedBox(height: 20),
               Center(
                 child: ElevatedButton(
-                  onPressed: agree ? _submitAuthorization : null,
+                  onPressed: () {
+                    print('🧨 BUTTON CLICKED');
+                    if (!agree) {
+                      print('🚫 User didn’t check the agreement box');
+                      return;
+                    }
+                    _submitAuthorization();
+                  },
+
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xff00408b),
                   ),
