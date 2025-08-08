@@ -53,14 +53,20 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
       return;
     }
 
+    final forcedToolType =
+        (_actionName == 'صيانة' || _actionName == 'تعبئة')
+            ? 'fire extinguisher'
+            : _toolType;
+
     final data = {
       'action_name': _actionName,
-      'tool_type': _toolType,
+      'tool_type': forcedToolType, // 👈 force it here
       'material_type': _materialType,
       if (_actionName == 'صيانة') 'capacity': _capacity,
       'component_name': _componentName,
       'price': price,
     }..removeWhere((key, value) => value == null);
+    print('📦 FINAL DATA TO INSERT: $data'); // 👈 ADD THIS LINE
 
     await Supabase.instance.client.from('maintenance_prices').insert(data);
 
@@ -136,6 +142,12 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
                 ],
 
                 if (_actionName == 'تركيب قطع غيار') ...[
+                  buildToolTypeDropdown([
+                    'fire extinguisher',
+                    'hose reel',
+                    'fire hydrant',
+                  ]),
+                  const SizedBox(height: 12),
                   buildMaterialDropdown([
                     'ثاني اكسيد الكربون',
                     'البودرة الجافة',
@@ -143,7 +155,6 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
                     'الماء',
                     'البودرة الجافة ذات مستشعر حرارة الاوتامتيكي',
                   ]),
-
                   const SizedBox(height: 12),
                   if (_materialType != null)
                     buildComponentDropdown(
@@ -242,6 +253,17 @@ class _AddMaintenancePricePageState extends State<AddMaintenancePricePage> {
           items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: (val) => setState(() => _componentName = val),
       validator: (val) => val == null ? 'يرجى اختيار اسم القطعة' : null,
+    );
+  }
+
+  Widget buildToolTypeDropdown(List<String> items) {
+    return DropdownButtonFormField<String>(
+      value: _toolType,
+      decoration: customInputDecoration.copyWith(labelText: 'نوع الأداة'),
+      items:
+          items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+      onChanged: (val) => setState(() => _toolType = val),
+      validator: (val) => val == null ? 'يرجى اختيار نوع الأداة' : null,
     );
   }
 }

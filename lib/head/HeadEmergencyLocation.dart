@@ -181,7 +181,7 @@ Future<void> _loadData() async {
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
-            'مراجعة المهام الطارئة',
+            'الطارئة',
             style: TextStyle(color: Colors.white),
           ),
           backgroundColor: const Color(0xff00408b),

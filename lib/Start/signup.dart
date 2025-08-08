@@ -36,6 +36,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   .from('users')
                   .select()
                   .eq('role', 'المدير')
+                  .eq('is_approved', true)
                   .maybeSingle();
 
           if (existingAdmin != null) {

@@ -171,7 +171,7 @@ class _TechnicianPeriodicLocationsPageState
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
-            'المواقع - المهام الدورية',
+            'الدورية',
             style: TextStyle(color: Colors.white),
           ),
           backgroundColor: const Color(0xff00408b),

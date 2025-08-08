@@ -165,9 +165,11 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'عرض جميع المستخدمين',
-            style: TextStyle(color: Colors.white),
+          title: Center(
+            child: const Text(
+              'عرض المستخدمين',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
           backgroundColor: const Color(0xff00408b),
           iconTheme: const IconThemeData(color: Colors.white),
@@ -363,7 +365,8 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
                                             context: context,
                                             builder:
                                                 (context) => Directionality(
-                                                  textDirection: TextDirection.rtl,
+                                                  textDirection:
+                                                      TextDirection.rtl,
                                                   child: AlertDialog(
                                                     title: const Text(
                                                       'تأكيد الحذف',
@@ -376,19 +379,21 @@ class _ManagerUserListPageState extends State<ManagerUserListPage> {
                                                         onPressed:
                                                             () => Navigator.pop(
                                                               context,
-                                                              false,
+                                                              true,
                                                             ),
                                                         child: const Text(
-                                                          'إلغاء',
+                                                          'نعم',
                                                         ),
                                                       ),
                                                       TextButton(
                                                         onPressed:
                                                             () => Navigator.pop(
                                                               context,
-                                                              true,
+                                                              false,
                                                             ),
-                                                        child: const Text('نعم'),
+                                                        child: const Text(
+                                                          'إلغاء',
+                                                        ),
                                                       ),
                                                     ],
                                                   ),

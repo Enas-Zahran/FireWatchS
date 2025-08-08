@@ -64,9 +64,6 @@ class ToolDetailsPage extends StatelessWidget {
                   buildInfoTile('الشركة', company),
                   buildInfoTile('آخر صيانة تمت', lastMaintenance),
                   buildInfoTile('الصيانة القادمة', nextMaintenance),
-                  const SizedBox(height: 12),
-                  buildInfoTile('السعر الأساسي', priceText, bold: true),
-                  buildInfoTile('مجموع التكاليف', totalCostsText, bold: true),
 
                   const SizedBox(height: 40),
                 ],

@@ -200,10 +200,7 @@ class _HeadPeriodicLocationsPageState extends State<HeadPeriodicLocationsPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'مراجعة المهام الدورية',
-            style: TextStyle(color: Colors.white),
-          ),
+          title: const Text(' الدورية', style: TextStyle(color: Colors.white)),
           backgroundColor: const Color(0xff00408b),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),

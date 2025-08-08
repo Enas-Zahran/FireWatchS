@@ -184,7 +184,7 @@ class _HeadCorrectiveLocationsPageState
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
-            'مراجعة المهام العلاجية',
+            'العلاجية',
             style: TextStyle(color: Colors.white),
           ),
           backgroundColor: const Color(0xff00408b),

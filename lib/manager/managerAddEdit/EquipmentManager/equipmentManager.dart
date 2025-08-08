@@ -106,7 +106,7 @@ class _AllToolsPageState extends State<AllToolsPage> {
         appBar: AppBar(
           title: Center(
             child: const Text(
-              'عرض جميع المعدات',
+              ' المعدات',
               style: TextStyle(color: Colors.white),
             ),
           ),

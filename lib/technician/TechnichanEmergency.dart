@@ -139,7 +139,7 @@ class _TechnicianEmergencyLocationsPageState
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
-            'المواقع - المهام الطارئة',
+            'الطارئة',
             style: TextStyle(color: Colors.white),
           ),
           backgroundColor: const Color(0xff00408b),

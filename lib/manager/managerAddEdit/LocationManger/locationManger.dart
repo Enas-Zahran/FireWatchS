@@ -40,8 +40,9 @@ class _LocationsPageState extends State<LocationsPage> {
           title: const Text('تأكيد الحذف'),
           content: const Text('هل أنت متأكد من حذف هذا المكان؟'),
           actions: [
+                        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
           ],
         ),
       ),

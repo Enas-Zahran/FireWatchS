@@ -130,7 +130,7 @@ class _TechnicianCorrectiveLocationsPageState extends State<TechnicianCorrective
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('المواقع - المهام العلاجية', style: TextStyle(color: Colors.white)),
+          title: const Text('العلاجية', style: TextStyle(color: Colors.white)),
           backgroundColor: const Color(0xff00408b),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
